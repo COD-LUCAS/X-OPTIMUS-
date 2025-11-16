@@ -27,7 +27,11 @@ Before deploying the bot, you need to obtain the following credentials:
 
 ### **1. Deploy on Render**
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+<p align="center">
+  <a href="https://render.com/deploy">
+    <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render">
+  </a>
+</p>
 
 Click the button above to deploy directly to Render. The `render.yaml` file is already configured.
 
@@ -40,7 +44,26 @@ Simply fill in these variables during deployment and your bot will be up and run
 
 ---
 
-### **2. Deploy on Panel**
+### **2. Deploy on Koyeb**
+
+<p align="center">
+  <a href="https://app.koyeb.com/deploy">
+    <img src="https://www.koyeb.com/static/images/deploy/button.svg" alt="Deploy to Koyeb">
+  </a>
+</p>
+
+Click the button above to deploy directly to Koyeb. The `koyeb.yaml` file is already configured.
+
+**Required Environment Variables:**
+- `API_ID` - Your Telegram API ID
+- `API_HASH` - Your Telegram API Hash
+- `SESSION_STRING` - Your session string from the link above
+
+Your bot will be deployed and running on Koyeb's infrastructure!
+
+---
+
+### **3. Deploy on Panel**
 
 1. **Upload Files**: Upload all bot files to your panel
 2. **Set Startup Command**: Set `main.py` as the startup file
