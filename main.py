@@ -5,7 +5,7 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv("config.env")   # <-- FIXED
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
