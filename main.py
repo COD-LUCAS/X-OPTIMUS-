@@ -4,7 +4,6 @@ import requests
 import importlib
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
-from datetime import datetime
 
 API_ID = int(os.environ.get("API_ID"))
 API_HASH = os.environ.get("API_HASH")
@@ -19,46 +18,43 @@ def load_plugins():
             name = filename[:-3]
             try:
                 module = importlib.import_module(f"plugins.{name}")
+                importlib.reload(module)
                 plugins[name] = module
+                if hasattr(module, "register"):
+                    module.register(bot)
             except Exception as e:
                 print(f"Failed to load {name}: {e}")
 
 load_plugins()
 
-@bot.on(events.NewMessage(pattern=r"\/install (.+)"))
+@bot.on(events.NewMessage(pattern=r"\/install (.+) (.+)"))
 async def install_plugin(event):
     url = event.pattern_match.group(1)
+    name = event.pattern_match.group(2)
+
     if not url.startswith("http"):
-        return await event.reply("❌ Invalid gist link.")
+        return await event.reply("❌ Invalid link.")
+
+    path = f"plugins/{name}.py"
+
+    if os.path.exists(path):
+        return await event.reply("⚠ Plugin name already exists. Choose another.")
+
     try:
         code = requests.get(url).text
-        name = "plugin_" + str(len(plugins) + 1)
-        with open(f"plugins/{name}.py", "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(code)
+
         importlib.invalidate_caches()
         module = importlib.import_module(f"plugins.{name}")
         plugins[name] = module
-        await event.reply(f"✅ Plugin installed as **{name}**")
+        if hasattr(module, "register"):
+            module.register(bot)
+
+        await event.reply(f"✅ Plugin installed as `{name}.py`")
+
     except Exception as e:
-        await event.reply(f"❌ Error installing: {e}")
-
-@bot.on(events.NewMessage(pattern=r"\/menu"))
-async def menu(event):
-    if os.path.exists("assets/menu.jpg"):
-        await bot.send_file(event.chat_id, "assets/menu.jpg", caption="📌 **X-OPTIMUS Menu**")
-    else:
-        await event.reply("Commands:\n/menu\n/ping\n/reboot\n/autoupdate\n/install {gist}")
-
-@bot.on(events.NewMessage(pattern=r"\/ping"))
-async def ping(event):
-    start = datetime.now()
-    msg = await event.reply("Pinging...")
-    end = datetime.now()
-    ms = (end - start).microseconds // 1000
-    if os.path.exists("assets/ping.jpg"):
-        await bot.send_file(event.chat_id, "assets/ping.jpg", caption=f"🏓 Pong: **{ms}ms**")
-    else:
-        await msg.edit(f"🏓 Pong: **{ms}ms**")
+        await event.reply(f"❌ Error: {e}")
 
 @bot.on(events.NewMessage(pattern=r"\/reboot"))
 async def reboot(event):
@@ -66,12 +62,12 @@ async def reboot(event):
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 @bot.on(events.NewMessage(pattern=r"\/autoupdate"))
-async def update(event):
+async def autoupdate(event):
     await event.reply("🔄 Updating…")
     os.system("git pull")
-    await event.reply("✅ Updated! Restarting…")
+    await event.reply("✅ Updated. Restarting…")
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
-print("🚀 X-OPTIMUS USERBOT STARTED...")
+print("🚀 X-OPTIMUS USERBOT RUNNING…")
 bot.start()
 bot.run_until_disconnected()
