@@ -1,0 +1,14 @@
+services:
+  - name: x-optimus
+    runtime: python3.12
+    build:
+      commands:
+        - pip install -r requirements.txt
+    env:
+      API_ID: ${API_ID}
+      API_HASH: ${API_HASH}
+      STRING_SESSION: ${STRING_SESSION}
+      OWNER: LUCAS
+    run:
+      commands:
+        - python3 main.py
