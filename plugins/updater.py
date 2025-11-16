@@ -3,66 +3,86 @@ import os
 import sys
 import json
 import requests
+import zipfile
+import shutil
 
-RAW_VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
+VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
+ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
 
-def parse_version(v: str):
+def parse(v):
     try:
         return tuple(map(int, v.split(".")))
-    except Exception:
-        return (0, 0, 0)
+    except:
+        return (0,)
 
 
-def get_versions():
-    with open("version.json", "r", encoding="utf-8") as f:
-        local_data = json.load(f)
-    local_ver = local_data.get("version", "0.0.0")
+def local_version():
+    try:
+        with open("version.json", "r") as f:
+            return json.load(f).get("version", "0.0.0")
+    except:
+        return "0.0.0"
 
-    r = requests.get(RAW_VERSION_URL, timeout=10)
-    remote_data = r.json()
-    remote_ver = remote_data.get("version", "0.0.0")
-    changelog = remote_data.get("changelog", [])
 
-    is_new = parse_version(remote_ver) > parse_version(local_ver)
-    return local_ver, remote_ver, changelog, is_new
+def remote_version():
+    r = requests.get(VERSION_URL).json()
+    return r.get("version", "0.0.0"), r.get("changelog", [])
 
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern="/checkupdate"))
-    async def checkupdate(event):
-        msg = await event.reply("🔍 Checking for updates…")
-        try:
-            local_ver, remote_ver, changelog, is_new = get_versions()
-            if is_new:
-                changes = "\n".join(f"• {c}" for c in changelog) or "No details."
-                text = f"""🆕 New update available
-
-Current: `{local_ver}`
-Latest: `{remote_ver}`
-
-Changes:
-{changes}
-
-Type `/update` to install."""
-            else:
-                text = f"✅ X-OPTIMUS is up to date.\nCurrent version: `{local_ver}`"
-            await msg.edit(text)
-        except Exception as e:
-            await msg.edit(f"❌ Update check failed:\n`{e}`")
+    async def check(event):
+        msg = await event.reply("🔍 Checking updates…")
+        lv = local_version()
+        rv, changes = remote_version()
+        if parse(rv) > parse(lv):
+            cl = "\n".join(f"• {c}" for c in changes)
+            await msg.edit(f"🆕 Update available\nCurrent: `{lv}`\nLatest: `{rv}`\n\n{cl}\n\nUse /update")
+        else:
+            await msg.edit(f"✅ Up to date\nCurrent version: `{lv}`")
 
     @bot.on(events.NewMessage(pattern="/update"))
-    async def do_update(event):
-        msg = await event.reply("♻ Checking for updates…")
-        try:
-            local_ver, remote_ver, changelog, is_new = get_versions()
-            if not is_new:
-                return await msg.edit(f"✅ Already up to date.\nCurrent version: `{local_ver}`")
+    async def update(event):
+        msg = await event.reply("⬇ Downloading latest version…")
 
-            await msg.edit(f"⬇ Updating `{local_ver}` → `{remote_ver}` …")
-            os.system("git pull")
-            await msg.edit(f"✅ Updated to `{remote_ver}`.\n🔁 Restarting…")
+        try:
+            r = requests.get(ZIP_URL)
+            with open("update.zip", "wb") as f:
+                f.write(r.content)
+
+            await msg.edit("📦 Extracting update…")
+
+            with zipfile.ZipFile("update.zip", "r") as z:
+                z.extractall("update_temp")
+
+            folder = os.listdir("update_temp")[0]
+            src = os.path.join("update_temp", folder)
+
+            for item in os.listdir():
+                if item not in ["update.zip", "update_temp"]:
+                    try:
+                        if os.path.isfile(item):
+                            os.remove(item)
+                        else:
+                            shutil.rmtree(item)
+                    except:
+                        pass
+
+            for item in os.listdir(src):
+                s = os.path.join(src, item)
+                d = os.path.join(".", item)
+                if os.path.isdir(s):
+                    shutil.copytree(s, d)
+                else:
+                    shutil.copy2(s, d)
+
+            shutil.rmtree("update_temp")
+            os.remove("update.zip")
+
+            await msg.edit("✅ Update installed\n🔁 Restarting…")
             os.execv(sys.executable, [sys.executable] + sys.argv)
+
         except Exception as e:
-            await msg.edit(f"❌ Update failed:\n`{e}`")
+            await msg.edit(f"❌ Update failed\n`{e}`")
