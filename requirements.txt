@@ -1,4 +1,5 @@
 telethon
 requests
-uvicorn
 fastapi
+uvicorn
+psutil
