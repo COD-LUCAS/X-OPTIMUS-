@@ -3,79 +3,79 @@ import os
 import json
 import requests
 
-RAW_VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
+RAW_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 
-CORE_PLUGINS = [
+CORE = [
     "ping",
     "updater",
     "menu",
+    "alive",
     "install",
     "reboot"
 ]
 
-def get_local_version():
+def local_ver():
     with open("version.json", "r", encoding="utf-8") as f:
         return json.load(f).get("version", "0.0.0")
 
-def get_remote_version():
+def remote_ver():
     try:
-        r = requests.get(RAW_VERSION_URL, timeout=5)
+        r = requests.get(RAW_URL, timeout=5)
         return r.json().get("version", "0.0.0")
     except:
         return "0.0.0"
 
 def parse(v):
-    try:
-        return tuple(map(int, v.split(".")))
-    except:
-        return (0,)
+    try: return tuple(map(int, v.split(".")))
+    except: return (0,)
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern="/menu"))
     async def menu(event):
-        local = get_local_version()
-        remote = get_remote_version()
+        lv = local_ver()
+        rv = remote_ver()
 
-        if parse(remote) > parse(local):
-            status = f"🆕 Update Available `{local}` → `{remote}`"
-        elif parse(remote) == parse(local):
-            status = f"✅ Up to Date `{local}`"
+        if parse(rv) > parse(lv):
+            status = f"🆕 Update `{lv}` → `{rv}`"
+        elif parse(rv) == parse(lv):
+            status = f"✅ Up to date `{lv}`"
         else:
-            status = f"⚠ Local Version Ahead `{local}`"
+            status = f"⚠ Ahead `{lv}`"
 
         files = os.listdir("plugins")
         installed = sorted([f[:-3] for f in files if f.endswith(".py")])
 
-        core_list = "\n".join(f"• `{p}`" for p in CORE_PLUGINS)
-        installed_list = "\n".join(f"• `{p}`" for p in installed)
+        core_list = "\n".join(f"• `{c}`" for c in CORE)
+        inst_list = "\n".join(f"• `{p}`" for p in installed)
 
-        text = f"""
+        caption = f"""
 🎛 **X-OPTIMUS Control Panel**
-━━━━━━━━━━━━━━━━━━
-📦 **Version:** `{local}`
-🔄 **Status:** {status}
-━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
+📌 Version: `{lv}`
+🔄 Status: {status}
+━━━━━━━━━━━━━━
 🟣 **Core Plugins**
 {core_list}
 
 🟢 **Installed Plugins**
-{installed_list}
+{inst_list}
 
-🛠 **Commands**
-• `/install url name`
-• `/remove name`
-• `/allplug`
-• `/checkupdate`
-• `/update`
+🛠 Commands
+/install url name  
+/remove name  
+/allplug  
+/checkupdate  
+/update
 """
-        await event.reply(text)
+
+        await bot.send_file(event.chat_id, "assets/menu.jpg", caption=caption)
 
     @bot.on(events.NewMessage(pattern="/allplug"))
     async def allplug(event):
         files = os.listdir("plugins")
         plugs = sorted([f[:-3] for f in files if f.endswith(".py")])
-        text = "📦 **Installed Plugins:**\n" + "\n".join(f"• `{p}`" for p in plugs)
+        text = "📦 Installed Plugins:\n" + "\n".join(f"• `{p}`" for p in plugs)
         await event.reply(text)
 
     @bot.on(events.NewMessage(pattern="/remove (.+)"))
@@ -83,6 +83,6 @@ def register(bot):
         name = event.pattern_match.group(1)
         path = f"plugins/{name}.py"
         if not os.path.exists(path):
-            return await event.reply("❌ Plugin not found.")
+            return await event.reply("❌ Not found.")
         os.remove(path)
-        await event.reply(f"🗑 Removed `{name}`. Use `/reboot` to apply.")
+        await event.reply(f"🗑 Removed `{name}`. Use `/reboot`.")
