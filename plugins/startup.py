@@ -1,17 +1,37 @@
-import os
 from telethon import events
-from datetime import datetime
+import os
 
-START_IMG = "assets/startup.jpg"
+STARTUP_IMAGE = "assets/startup.jpg"  # your image file
 
-async def register_startup(bot, owner, sudo):
-    users = [owner] + sudo
-    for uid in users:
-        try:
-            caption = "🟢 X-OPTIMUS Started Successfully!\nBot is now online and running 🚀"
-            if os.path.exists(START_IMG):
-                await bot.send_file(uid, START_IMG, caption=caption)
-            else:
-                await bot.send_message(uid, caption)
-        except:
-            pass
+async def on_startup(bot):
+    """
+    This runs automatically on startup because main.py calls run_startup_events()
+    """
+
+    user = await bot.get_me()
+
+    caption = f"""
+🟢 **X-OPTIMUS Started Successfully!**
+
+👤 **User:** {user.first_name}
+⚙️ **System:** Userbot Online & Running
+🚀 **Status:** Activated
+"""
+
+    # Send startup image if present
+    if os.path.exists(STARTUP_IMAGE):
+        await bot.send_file("me", STARTUP_IMAGE, caption=caption)
+    else:
+        await bot.send_message("me", caption)
+
+
+def register(bot):
+    """
+    Optional manual command if user types /startup
+    """
+    @bot.on(events.NewMessage(pattern="/startup"))
+    async def manual_start(event):
+        if os.path.exists(STARTUP_IMAGE):
+            await event.reply(file=STARTUP_IMAGE, message="🟢 Bot is running!")
+        else:
+            await event.reply("🟢 Bot is running!")
