@@ -27,7 +27,7 @@ Before deploying the bot, you need to obtain the following credentials:
 
 ### **1. Deploy on Render**
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
 
 Click the button above to deploy directly to Render. The `render.yaml` file is already configured.
 
