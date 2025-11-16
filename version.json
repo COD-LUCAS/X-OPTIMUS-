@@ -2,6 +2,6 @@
   "version": "1.0.0",
   "changelog": [
     "Initial public release of X-OPTIMUS",
-    "Added /ping, /reboot, /install"
+    "Added ping, reboot, install, menu, update system"
   ]
 }
