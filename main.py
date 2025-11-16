@@ -5,19 +5,35 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 from dotenv import load_dotenv
 
-load_dotenv("config.env")   # <-- FIXED
+# Load config.env ONLY if present (works on all hosts)
+if os.path.exists("config.env"):
+    load_dotenv("config.env")
 
-API_ID = int(os.getenv("API_ID"))
+# Universal variable reading (ENV first, config.env second)
+API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
 
+# Safety check
+if not API_ID or not API_HASH or not STRING_SESSION:
+    print("\n❌ ERROR: Missing API_ID / API_HASH / STRING_SESSION\n")
+    print("➡ Make sure they exist in:")
+    print("   • Render: Environment tab")
+    print("   • OptiKlink: config.env")
+    print("   • Railway: Variables")
+    print("   • Koyeb: Runtime > Environment")
+    exit()
+
+API_ID = int(API_ID)
+
+# Initialize userbot
 bot = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
 plugins = {}
 
 BORDER = "═" * 50
 
-def pretty_log(title, value):
-    print(f"{title:<15}: {value}")
+def pretty_log(n, v):
+    print(f"{n:<15}: {v}")
 
 def load_plugins():
     count = 0
@@ -47,7 +63,7 @@ async def start_bot():
     plugin_count = load_plugins()
 
     pretty_log("🆔 API ID", API_ID)
-    pretty_log("👁 Platform", platform.system())
+    pretty_log("🖥 Platform", platform.system())
     pretty_log("📦 Plugins", plugin_count)
     pretty_log("🔧 Telethon", "1.x")
 
@@ -56,7 +72,7 @@ async def start_bot():
     await bot.start()
     await run_startup_events()
 
-    print("🟢 BOT ONLINE & RUNNING SUCCESSFULLY")
+    print("🟢 BOT ONLINE & READY")
     print(BORDER)
 
 bot.loop.run_until_complete(start_bot())
