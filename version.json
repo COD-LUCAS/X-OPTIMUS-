@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.2",
   "changelog": [
     "Initial public release of X-OPTIMUS",
     "Added ping, reboot, install, menu, update system"
