@@ -1,16 +1,26 @@
 import os
 import sys
-import requests
 import importlib
+import requests
+import asyncio
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
+
+# ------------------------------- ENV -----------------------------------------
 
 API_ID = int(os.environ.get("API_ID"))
 API_HASH = os.environ.get("API_HASH")
 STRING = os.environ.get("STRING_SESSION")
+OWNER = os.environ.get("OWNER", "Unknown")
+VERSION = "1.0.0"
 
 bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
 plugins = {}
+
+os.makedirs("plugins", exist_ok=True)
+
+
+# ----------------------------- LOAD PLUGINS ---------------------------------
 
 def load_plugins():
     for filename in os.listdir("plugins"):
@@ -20,46 +30,48 @@ def load_plugins():
                 module = importlib.import_module(f"plugins.{name}")
                 importlib.reload(module)
                 plugins[name] = module
+
                 if hasattr(module, "register"):
                     module.register(bot)
-            except Exception as e:
-                print(f"Failed to load {name}: {e}")
 
-async def send_start_message():
-    try:
-        img = "assets/start.jpg"
-        if os.path.exists(img):
-            await bot.send_file(
-                "me",
-                img,
-                caption="🟢 **X-OPTIMUS Started Successfully!**\nBot is now online and running. 🚀"
-            )
-        else:
-            await bot.send_message(
-                "me",
-                "🟢 **X-OPTIMUS Started Successfully!**\nBot is now online and running. 🚀"
-            )
-    except:
-        pass
+                print(f"[PLUGIN] Loaded: {name}")
+
+            except Exception as e:
+                print(f"[PLUGIN] Failed: {name} -> {e}")
+
 
 load_plugins()
 
-@bot.on(events.NewMessage(pattern=r"^/install (.+)"))
+
+# -------------------------- RAW GIST FIX ------------------------------------
+
+def convert_to_raw(url: str):
+    if "gist.github.com" in url:
+        try:
+            parts = url.split("/")
+            user = parts[-3]
+            gist_id = parts[-1]
+            return f"https://gist.githubusercontent.com/{user}/{gist_id}/raw"
+        except:
+            return url
+    return url
+
+
+# --------------------------- INSTALL PLUGIN ----------------------------------
+
+@bot.on(events.NewMessage(pattern=r"\/install (.+)"))
 async def install_plugin(event):
     url = event.pattern_match.group(1)
-    if not url.startswith("http"):
-        return await event.reply("❌ Invalid URL.")
+    url = convert_to_raw(url)
 
-    name = url.split("/")[-1].split("?")[0].replace(".py", "")
+    name = url.split("/")[-1].replace(".py", "")
     path = f"plugins/{name}.py"
-
-    if os.path.exists(path):
-        return await event.reply("⚠ Plugin already exists.")
 
     try:
         code = requests.get(url).text
-        if not code or "def register" not in code:
-            return await event.reply("❌ Invalid plugin file.")
+
+        if "def register" not in code:
+            return await event.reply("❌ Invalid plugin file (no register function)")
 
         with open(path, "w", encoding="utf-8") as f:
             f.write(code)
@@ -67,16 +79,19 @@ async def install_plugin(event):
         importlib.invalidate_caches()
         module = importlib.import_module(f"plugins.{name}")
         plugins[name] = module
+
         if hasattr(module, "register"):
             module.register(bot)
 
-        await event.reply(f"✅ Installed plugin `{name}.py`")
+        await event.reply(f"✅ Plugin `{name}` installed!")
 
     except Exception as e:
-        await event.reply(f"❌ Error: {e}")
+        await event.reply(f"❌ Error: `{e}`")
 
 
-@bot.on(events.NewMessage(pattern=r"^/remove (.+)"))
+# --------------------------- REMOVE PLUGIN -----------------------------------
+
+@bot.on(events.NewMessage(pattern=r"\/remove (.+)"))
 async def remove_plugin(event):
     name = event.pattern_match.group(1)
     path = f"plugins/{name}.py"
@@ -84,31 +99,79 @@ async def remove_plugin(event):
     if not os.path.exists(path):
         return await event.reply("❌ Plugin not found.")
 
-    try:
-        os.remove(path)
-        plugins.pop(name, None)
-        await event.reply(f"🗑 Removed plugin `{name}.py`")
-    except Exception as e:
-        await event.reply(f"❌ Error: {e}")
+    os.remove(path)
+    await event.reply(f"🗑 Plugin `{name}` removed.\nRestart required.")
 
 
-@bot.on(events.NewMessage(pattern=r"^/allplug$"))
-async def allplug(event):
-    if not plugins:
+# --------------------------- LIST PLUGINS ------------------------------------
+
+@bot.on(events.NewMessage(pattern=r"\/allplug"))
+async def list_plugins(event):
+    files = [f[:-3] for f in os.listdir("plugins") if f.endswith(".py")]
+    if not files:
         return await event.reply("⚠ No plugins installed.")
-    text = "🔌 **Installed Plugins:**\n\n" + "\n".join(f"• `{p}`" for p in plugins)
+
+    text = "🧩 **Installed Plugins:**\n\n"
+    text += "\n".join([f"• `{p}`" for p in files])
+
     await event.reply(text)
 
 
-@bot.on(events.NewMessage(pattern=r"^/reboot$"))
-async def reboot(event):
-    await bot.send_message("me", "🔄 **X-OPTIMUS is restarting…**")
-    await event.reply("🔁 Restarting Now…")
+# ------------------------------- ALIVE ---------------------------------------
+
+@bot.on(events.NewMessage(pattern=r"\/alive"))
+async def alive(event):
+    await event.reply(
+        f"🤖 **X-OPTIMUS ONLINE**\n"
+        f"━━━━━━━━━━━━━━\n"
+        f"🆙 Version: `{VERSION}`\n"
+        f"👑 Owner: `{OWNER}`\n"
+        f"📌 Python: `{sys.version.split()[0]}`\n"
+        f"💻 Platform: `{sys.platform}`"
+    )
+
+
+# ------------------------------- MENU ----------------------------------------
+
+@bot.on(events.NewMessage(pattern=r"\/menu"))
+async def menu(event):
+    files = [f[:-3] for f in os.listdir("plugins") if f.endswith(".py")]
+
+    text = "🗂 **X-OPTIMUS PLUGIN MENU**\n"
+    text += "━━━━━━━━━━━━━━\n"
+    text += f"🆙 Version: `{VERSION}`\n"
+    text += f"👑 Owner: `{OWNER}`\n\n"
+    text += "**Installed Plugins:**\n"
+    text += "\n".join([f"• `{p}`" for p in files]) or "No plugins installed."
+
+    await event.reply(text)
+
+
+# ------------------------------- PING ----------------------------------------
+
+@bot.on(events.NewMessage(pattern=r"\/ping"))
+async def ping(event):
+    start = asyncio.get_event_loop().time()
+    msg = await event.reply("Pinging…")
+    end = asyncio.get_event_loop().time()
+
+    await msg.edit(f"🏓 Pong: `{int((end - start) * 1000)}ms`")
+
+
+# ------------------------------- UPDATE --------------------------------------
+
+@bot.on(events.NewMessage(pattern=r"\/update"))
+async def update(event):
+    await event.reply("🔄 Updating from GitHub…")
+
+    os.system("git pull")
+    await asyncio.sleep(1)
+
+    await event.reply("✅ Updated. Restarting…")
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
-print("🚀 X-OPTIMUS USERBOT RUNNING…")
+# ------------------------------- RUN BOT -------------------------------------
 
 bot.start()
-bot.loop.run_until_complete(send_start_message())
 bot.run_until_disconnected()
