@@ -1,5 +1,5 @@
-from telethon import events
 import os
+from telethon import events
 
 def register(bot):
 
@@ -8,34 +8,34 @@ def register(bot):
 
         img = "assets/menu.jpg"
 
+        # version from version.txt
         version = "Unknown"
         if os.path.exists("version.txt"):
             version = open("version.txt").read().strip()
 
-        owner = "COD-LUCAS"  # FIXED OWNER NAME
+        # owner from config.env
+        owner = os.getenv("OWNER", "Unknown")
 
-        mode = os.environ.get("BOT_MODE", "public").capitalize()
-
-        plugins = []
+        # get all plugins
+        files = []
         for f in os.listdir("plugins"):
             if f.endswith(".py") and f != "__init__.py":
-                plugins.append(f[:-3])
+                files.append(f[:-3])
 
-        plugins.sort()
-        plug_text = "\n".join(f"• {p}" for p in plugins) if plugins else "No plugins installed."
+        files.sort()
+        plist = "\n".join(f"• {p}" for p in files) if files else "No plugins found."
 
         text = (
             "🔱 **X-OPTIMUS MENU**\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            f"🆙 **Version:** {version}\n"
-            f"👑 **Owner:** {owner}\n"
-            f"🔧 **Mode:** {mode}\n"
+            f"🆙 Version: `{version}`\n"
+            f"👑 Owner: `{owner}`\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "**📦 Installed Plugins:**\n"
-            f"{plug_text}"
+            f"{plist}"
         )
 
         if os.path.exists(img):
-            await event.reply(file=img, message=text)
+            await bot.send_file(event.chat_id, img, caption=text)
         else:
             await event.reply(text)
