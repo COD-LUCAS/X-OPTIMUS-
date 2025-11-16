@@ -1,41 +1,35 @@
 import os
 from telethon import events
 
+MENU_IMAGE = "assets/menu.jpg"  # keep your menu.jpg here
+
+def get_all_commands():
+    commands = []
+    for file in os.listdir("plugins"):
+        if file.endswith(".py") and file != "__init__.py":
+            name = file[:-3]
+            commands.append(name)
+    commands.sort()
+    return commands
+
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/menu$"))
+    @bot.on(events.NewMessage(pattern="/menu"))
     async def menu(event):
 
-        img = "assets/menu.jpg"
+        commands = get_all_commands()
+        cmd_list = "\n".join([f"• {cmd}" for cmd in commands])
 
-        # version from version.txt
-        version = "Unknown"
-        if os.path.exists("version.txt"):
-            version = open("version.txt").read().strip()
+        text = f"""
+🛡️ **X-OPTIMUS COMMAND MENU**
 
-        # owner from config.env
-        owner = os.getenv("OWNER", "Unknown")
+{cmd_list}
+"""
 
-        # get all plugins
-        files = []
-        for f in os.listdir("plugins"):
-            if f.endswith(".py") and f != "__init__.py":
-                files.append(f[:-3])
-
-        files.sort()
-        plist = "\n".join(f"• {p}" for p in files) if files else "No plugins found."
-
-        text = (
-            "🔱 **X-OPTIMUS MENU**\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            f"🆙 Version: `{version}`\n"
-            f"👑 Owner: `{owner}`\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "**📦 Installed Plugins:**\n"
-            f"{plist}"
-        )
-
-        if os.path.exists(img):
-            await bot.send_file(event.chat_id, img, caption=text)
+        if os.path.exists(MENU_IMAGE):
+            await event.reply(
+                file=MENU_IMAGE,
+                message=text
+            )
         else:
             await event.reply(text)
