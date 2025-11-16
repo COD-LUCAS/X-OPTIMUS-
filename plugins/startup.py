@@ -1,44 +1,17 @@
 import os
 from telethon import events
+from datetime import datetime
 
-sent = False  # avoid duplicate sends
+START_IMG = "assets/startup.jpg"
 
-def register(bot):
-
-    @bot.on(events.ClientReady)
-    async def startmsg(event):
-        global sent
-        if sent:
-            return
-        sent = True
-
-        # YOUR ID
-        owner = bot.me.id
-
-        # Load sudo users from env (comma separated)
-        sudo_raw = os.environ.get("SUDO_USERS", "")
-        sudo_list = []
-
-        if sudo_raw:
-            for x in sudo_raw.split(","):
-                try:
-                    sudo_list.append(int(x.strip()))
-                except:
-                    continue
-
-        # final list to send message
-        targets = [owner] + sudo_list
-
-        caption = (
-            "🟢 **X-OPTIMUS Started Successfully!**\n"
-            "Bot is now online and running. 🚀"
-        )
-
-        for user in targets:
-            try:
-                await bot.send_file(user, "assets/start.jpg", caption=caption)
-            except:
-                try:
-                    await bot.send_message(user, caption)
-                except:
-                    pass
+async def register_startup(bot, owner, sudo):
+    users = [owner] + sudo
+    for uid in users:
+        try:
+            caption = "🟢 X-OPTIMUS Started Successfully!\nBot is now online and running 🚀"
+            if os.path.exists(START_IMG):
+                await bot.send_file(uid, START_IMG, caption=caption)
+            else:
+                await bot.send_message(uid, caption)
+        except:
+            pass
