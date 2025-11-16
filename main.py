@@ -5,41 +5,37 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 from dotenv import load_dotenv
 
-# Load config.env ONLY if present (works on all hosts)
-if os.path.exists("config.env"):
-    load_dotenv("config.env")
+CONFIG_PATH = "config/config.env"
 
-# Universal variable reading (ENV first, config.env second)
+if not os.path.exists(CONFIG_PATH):
+    print("❌ ERROR: config/config.env not found!")
+    exit()
+
+load_dotenv(CONFIG_PATH)
+
 API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
 
-# Safety check
 if not API_ID or not API_HASH or not STRING_SESSION:
-    print("\n❌ ERROR: Missing API_ID / API_HASH / STRING_SESSION\n")
-    print("➡ Make sure they exist in:")
-    print("   • Render: Environment tab")
-    print("   • OptiKlink: config.env")
-    print("   • Railway: Variables")
-    print("   • Koyeb: Runtime > Environment")
+    print("❌ Missing values in config/config.env")
     exit()
 
 API_ID = int(API_ID)
 
-# Initialize userbot
 bot = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
 plugins = {}
 
 BORDER = "═" * 50
 
-def pretty_log(n, v):
-    print(f"{n:<15}: {v}")
+def pretty_log(a, b):
+    print(f"{a:<15}: {b}")
 
 def load_plugins():
     count = 0
-    for file in os.listdir("plugins"):
-        if file.endswith(".py") and file != "__init__.py":
-            name = file[:-3]
+    for f in os.listdir("plugins"):
+        if f.endswith(".py") and f != "__init__.py":
+            name = f[:-3]
             module = importlib.import_module(f"plugins.{name}")
             plugins[name] = module
             if hasattr(module, "register"):
@@ -48,24 +44,24 @@ def load_plugins():
     return count
 
 async def run_startup_events():
-    for module in plugins.values():
-        if hasattr(module, "on_startup"):
+    for m in plugins.values():
+        if hasattr(m, "on_startup"):
             try:
-                await module.on_startup(bot)
+                await m.on_startup(bot)
             except:
                 pass
 
 async def start_bot():
     print(BORDER)
-    print("🚀 X-OPTIMUS USERBOT STARTING…")
+    print("🚀 X-OPTIMUS USERBOT STARTING...")
     print(BORDER)
 
     plugin_count = load_plugins()
 
-    pretty_log("🆔 API ID", API_ID)
-    pretty_log("🖥 Platform", platform.system())
-    pretty_log("📦 Plugins", plugin_count)
-    pretty_log("🔧 Telethon", "1.x")
+    pretty_log("API ID", API_ID)
+    pretty_log("Platform", platform.system())
+    pretty_log("Plugins", plugin_count)
+    pretty_log("Telethon", "1.x")
 
     print(BORDER)
 
