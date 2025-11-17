@@ -6,20 +6,30 @@ from telethon.sessions import StringSession
 from dotenv import load_dotenv
 
 # ----------------------------------------------------------
-# LOAD CONFIG (OptiKLink uses /home/container only)
+# CONFIG LOADING (Supports Auto-Update Safe Location)
 # ----------------------------------------------------------
-CONFIG_PATH = "/home/container/config.env"
 
-if os.path.exists(CONFIG_PATH):
-    print("[CONFIG] Loading /home/container/config.env")
-    load_dotenv(CONFIG_PATH)
+CONTAINER_DATA_CFG = "/home/container_data/config.env"     # Safe from auto-update
+CONTAINER_CFG = "/home/container/config.env"               # Fallback
+
+if os.path.isfile(CONTAINER_DATA_CFG):
+    print("[CONFIG] Loading from /home/container_data/config.env")
+    load_dotenv(CONTAINER_DATA_CFG)
+
+elif os.path.isfile(CONTAINER_CFG):
+    print("[CONFIG] Loading from /home/container/config.env")
+    load_dotenv(CONTAINER_CFG)
+
 else:
-    print("[CONFIG] config.env NOT FOUND! Exiting...")
+    print("❌ NO config.env FOUND IN:")
+    print("   - /home/container_data/config.env")
+    print("   - /home/container/config.env")
     exit(1)
 
 # ----------------------------------------------------------
 # READ CONFIG VALUES
 # ----------------------------------------------------------
+
 API_ID = int(os.getenv("API_ID", 0))
 API_HASH = os.getenv("API_HASH", "")
 STRING_SESSION = os.getenv("STRING_SESSION", "")
@@ -30,8 +40,9 @@ if API_ID == 0 or API_HASH == "" or STRING_SESSION == "":
     exit(1)
 
 # ----------------------------------------------------------
-# START WEB SERVER (Render Needs This)
+# START WEB SERVER
 # ----------------------------------------------------------
+
 try:
     from webserver import start_webserver
     start_webserver()
@@ -42,12 +53,14 @@ except Exception as e:
 # ----------------------------------------------------------
 # CREATE BOT CLIENT
 # ----------------------------------------------------------
+
 bot = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
 plugins = {}
 
 # ----------------------------------------------------------
-# FANCY LOGGING
+# LOGGING
 # ----------------------------------------------------------
+
 BORDER = "═" * 50
 
 def log(title, value):
@@ -56,6 +69,7 @@ def log(title, value):
 # ----------------------------------------------------------
 # LOAD PLUGINS
 # ----------------------------------------------------------
+
 def load_plugins():
     count = 0
     for file in os.listdir("plugins"):
@@ -71,6 +85,7 @@ def load_plugins():
 # ----------------------------------------------------------
 # RUN STARTUP EVENTS
 # ----------------------------------------------------------
+
 async def run_startup_events():
     for module in plugins.values():
         if hasattr(module, "on_startup"):
@@ -82,6 +97,7 @@ async def run_startup_events():
 # ----------------------------------------------------------
 # MAIN STARTUP FUNCTION
 # ----------------------------------------------------------
+
 async def start_bot():
     print(BORDER)
     print("🚀 X-OPTIMUS USERBOT STARTING…")
@@ -106,5 +122,6 @@ async def start_bot():
 # ----------------------------------------------------------
 # RUN BOT
 # ----------------------------------------------------------
+
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
