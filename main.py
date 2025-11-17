@@ -4,39 +4,34 @@ import platform
 import threading
 from telethon import TelegramClient
 from telethon.sessions import StringSession
-from dotenv import load_dotenv
 from flask import Flask
+from dotenv import load_dotenv
 
-# Load config.env
-load_dotenv("config/config.env")
+load_dotenv("/home/container_data/config.env")
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
 
-# Flask keep-alive (REQUIRED for Render Web Services)
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "X-OPTIMUS USERBOT RUNNING"
+    return "X-OPTIMUS USERBOT ONLINE"
 
-def run_keepalive():
+def run_web():
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
 
-def start_keepalive():
-    t = threading.Thread(target=run_keepalive)
+def start_web():
+    t = threading.Thread(target=run_web)
+    t.daemon = True
     t.start()
 
-# Userbot setup
 bot = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
 plugins = {}
 
-BORDER = "═" * 50
-
-def pretty_log(title, value):
-    print(f"{title:<15}: {value}")
+border = "═" * 50
 
 def load_plugins():
     count = 0
@@ -50,36 +45,23 @@ def load_plugins():
             count += 1
     return count
 
-async def run_startup():
-    for module in plugins.values():
-        if hasattr(module, "on_startup"):
-            try:
-                await module.on_startup(bot)
-            except:
-                pass
-
 async def start_bot():
-    print(BORDER)
+    print(border)
     print("🚀 X-OPTIMUS USERBOT STARTING…")
-    print(BORDER)
+    print(border)
 
     plugin_count = load_plugins()
 
-    pretty_log("🆔 API ID", API_ID)
-    pretty_log("💻 Platform", platform.system())
-    pretty_log("📦 Plugins", plugin_count)
-    pretty_log("🔧 Telethon", "1.x")
-    print(BORDER)
+    print(f"API ID        : {API_ID}")
+    print(f"Platform      : {platform.system()}")
+    print(f"Plugins       : {plugin_count}")
+    print(f"Telethon      : 1.x")
+    print(border)
 
     await bot.start()
-    await run_startup()
-
     print("🟢 USERBOT RUNNING SUCCESSFULLY")
-    print(BORDER)
+    print(border)
 
-# Start keepalive server
-start_keepalive()
-
-# Start Userbot
+start_web()
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
