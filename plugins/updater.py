@@ -1,35 +1,23 @@
 from telethon import events
-import requests
 import os
+import json
 import zipfile
+import requests
 import shutil
-
-# ==========================
-# CONFIG
-# ==========================
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
-SAFE_KEEP = [
-    "config.env",
-    "config",
+SAFE_FILES = [
     "config/config.env",
-    "startup.jpg",
-    "plugins/updater.py",   # protect updater itself
 ]
 
-# ==========================
-# VERSION FUNCTIONS
-# ==========================
-
 def get_local_version():
-    if os.path.exists("version.json"):
-        try:
-            return open("version.json").read().strip()
-        except:
-            return "0.0.0"
-    return "0.0.0"
+    try:
+        with open("version.json", "r") as f:
+            return json.load(f).get("version", "0.0.0")
+    except:
+        return "0.0.0"
 
 def get_remote_version():
     try:
@@ -38,44 +26,25 @@ def get_remote_version():
     except:
         return "0.0.0", []
 
-# ==========================
-# REGISTER EVENTS
-# ==========================
-
 def register(bot):
 
-    # -----------------------
-    # CHECK UPDATE COMMAND
-    # -----------------------
     @bot.on(events.NewMessage(pattern="/checkupdate"))
-    async def check(event):
-        msg = await event.reply("🔍 **Checking for updates…**")
+    async def check(e):
+        msg = await e.reply("🔍 Checking for updates...")
+        lv = get_local_version()
+        rv, changes = get_remote_version()
 
-        local_ver = get_local_version()
-        remote_ver, changelog = get_remote_version()
-
-        if remote_ver == local_ver:
-            await msg.edit(
-                f"🟩 **Up to date!**\n"
-                f"Your version: `{local_ver}`\n"
-                f"No new updates available 🤝"
-            )
+        if rv != lv:
+            text = f"⚠️ Update Available!\n\nCurrent: `{lv}`\nNew: `{rv}`\n\nChangelog:\n"
+            text += "\n".join([f"• {c}" for c in changes])
+            text += "\n\nSend `/update` to install."
+            await msg.edit(text)
         else:
-            changes = "\n".join([f"• {c}" for c in changelog])
-            await msg.edit(
-                f"⚡ **UPDATE AVAILABLE!**\n\n"
-                f"🔻 Current Version: `{local_ver}`\n"
-                f"🔺 Latest Version: `{remote_ver}`\n\n"
-                f"📜 **Changelog:**\n{changes}\n\n"
-                f"Run `/update` to install."
-            )
+            await msg.edit(f"✅ Up to date!\nCurrent version: `{lv}`")
 
-    # -----------------------
-    # UPDATE COMMAND
-    # -----------------------
     @bot.on(events.NewMessage(pattern="/update"))
-    async def update(event):
-        msg = await event.reply("⬇ **Downloading latest update…**")
+    async def updater(e):
+        msg = await e.reply("⬇️ Downloading update...")
 
         try:
             # Download ZIP
@@ -83,44 +52,48 @@ def register(bot):
             with open("update.zip", "wb") as f:
                 f.write(r.content)
 
-            await msg.edit("📦 **Extracting update…**")
+            await msg.edit("📦 Extracting update...")
 
-            with zipfile.ZipFile("update.zip", "r") as z:
-                z.extractall("update_temp")
+            # Extract to temp folder
+            with zipfile.ZipFile("update.zip", "r") as zip_ref:
+                zip_ref.extractall("update_temp")
 
-            folder = os.listdir("update_temp")[0]
-            src = os.path.join("update_temp", folder)
+            # Detect the extracted folder name dynamically
+            folders = os.listdir("update_temp")
+            extracted_root = None
+            for f in folders:
+                if os.path.isdir(f"update_temp/{f}"):
+                    extracted_root = f"update_temp/{f}"
+                    break
 
-            # -------------------
-            # CLEAN OLD FILES
-            # -------------------
-            for item in os.listdir():
-                if item in SAFE_KEEP:
-                    continue
-                try:
-                    if os.path.isfile(item):
-                        os.remove(item)
-                    else:
-                        shutil.rmtree(item)
-                except:
-                    pass
+            if not extracted_root:
+                return await msg.edit("❌ Update failed!\nCould not detect extracted folder.")
 
-            # -------------------
-            # COPY NEW FILES
-            # -------------------
-            for item in os.listdir(src):
-                src_path = os.path.join(src, item)
-                if os.path.isfile(src_path):
-                    shutil.copy2(src_path, item)
-                else:
-                    shutil.copytree(src_path, item)
+            # Copy everything except SAFE_FILES
+            for root, dirs, files in os.walk(extracted_root):
+                rel_path = root.replace(extracted_root, "").lstrip("/")
+                dst_path = os.path.join(".", rel_path)
 
-            await msg.edit("✅ **Update installed successfully!**\n♻ Restarting bot…")
+                if not os.path.exists(dst_path):
+                    os.makedirs(dst_path, exist_ok=True)
 
-            # -------------------
-            # AUTO-RESTART
-            # -------------------
-            os.system("kill 1")
+                for file in files:
+                    src_file = os.path.join(root, file)
+                    dst_file = os.path.join(dst_path, file)
 
-        except Exception as e:
-            await msg.edit(f"❌ **Update failed!**\n`{e}`")
+                    # Do NOT overwrite sensitive files
+                    if dst_file.replace("\\", "/") in SAFE_FILES:
+                        continue
+
+                    shutil.copy2(src_file, dst_file)
+
+            # Cleanup
+            os.remove("update.zip")
+            shutil.rmtree("update_temp", ignore_errors=True)
+
+            # Success message
+            await msg.edit("✅ Update installed!\n🔄 Restarting...")
+            os.execv(sys.executable, ['python'] + sys.argv)
+
+        except Exception as err:
+            await msg.edit(f"❌ Update failed!\n`{err}`")
