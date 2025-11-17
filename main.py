@@ -1,18 +1,35 @@
 import os
 import importlib
 import platform
+import threading
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from dotenv import load_dotenv
-from keepalive import keep_alive   # <--- required for Render
+from flask import Flask
 
-# Load env
-load_dotenv("config.env")
+# Load config.env
+load_dotenv("config/config.env")
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
 
+# Flask keep-alive (REQUIRED for Render Web Services)
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "X-OPTIMUS USERBOT RUNNING"
+
+def run_keepalive():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
+
+def start_keepalive():
+    t = threading.Thread(target=run_keepalive)
+    t.start()
+
+# Userbot setup
 bot = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
 plugins = {}
 
@@ -33,7 +50,7 @@ def load_plugins():
             count += 1
     return count
 
-async def run_startup_events():
+async def run_startup():
     for module in plugins.values():
         if hasattr(module, "on_startup"):
             try:
@@ -42,9 +59,6 @@ async def run_startup_events():
                 pass
 
 async def start_bot():
-
-    keep_alive()  # <-- REQUIRED: prevents Render shutdown
-
     print(BORDER)
     print("🚀 X-OPTIMUS USERBOT STARTING…")
     print(BORDER)
@@ -52,16 +66,20 @@ async def start_bot():
     plugin_count = load_plugins()
 
     pretty_log("🆔 API ID", API_ID)
+    pretty_log("💻 Platform", platform.system())
     pretty_log("📦 Plugins", plugin_count)
-    pretty_log("🖥 Platform", platform.system())
-
+    pretty_log("🔧 Telethon", "1.x")
     print(BORDER)
 
     await bot.start()
-    await run_startup_events()
+    await run_startup()
 
-    print("🟢 BOT ONLINE ✔")
+    print("🟢 USERBOT RUNNING SUCCESSFULLY")
     print(BORDER)
 
+# Start keepalive server
+start_keepalive()
+
+# Start Userbot
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
