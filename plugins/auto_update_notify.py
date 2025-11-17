@@ -1,63 +1,55 @@
-from telethon import events
+import asyncio
 import requests
 import json
-import asyncio
 import os
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
-CHECK_INTERVAL = 300
+LAST_FILE = "last_checked_version.txt"
 
-LAST_VERSION_FILE = "last_checked_version.txt"
-
-def get_local_version():
-    try:
-        with open("version.json", "r") as f:
-            return json.load(f)["version"]
-    except:
-        return "0.0.0"
-
-def get_remote_version():
-    try:
-        r = requests.get(VERSION_URL).json()
-        return r["version"], r.get("changelog", [])
-    except:
-        return "0.0.0", []
 
 async def notify_update(bot):
-    await bot.connect()
-    owner = int(os.getenv("OWNER_ID"))
-
     while True:
-        lv = get_local_version()
-        rv, log = get_remote_version()
+        try:
+            r = requests.get(VERSION_URL).json()
+            remote_version = r.get("version", "0.0.0")
+            changes = r.get("changelog", [])
 
-        if rv != lv:
-            # Prevent repeated notifications
-            try:
-                with open(LAST_VERSION_FILE, "r") as f:
-                    last_notified = f.read().strip()
-            except:
-                last_notified = None
+            # Load last version
+            if os.path.exists(LAST_FILE):
+                with open(LAST_FILE, "r") as f:
+                    last_version = f.read().strip()
+            else:
+                last_version = "0.0.0"
 
-            if last_notified != rv:
-                changelog = "\n".join([f"• {c}" for c in log])
-
+            # If new update
+            if remote_version != last_version:
                 text = (
                     "⚠️ **New Update Available!**\n\n"
-                    f"🔸 **Current:** `{lv}`\n"
-                    f"🔹 **New:** `{rv}`\n\n"
-                    "📝 **Changelog:**\n"
-                    f"{changelog}\n\n"
-                    "Send `/update` to install."
+                    f"🔹 **Current:** {last_version}\n"
+                    f"🔹 **Latest:** {remote_version}\n\n"
+                    "📌 **Changelog:**\n"
                 )
 
-                await bot.send_message(owner, text)
+                if changes:
+                    for c in changes:
+                        text += f"• {c}\n"
+                else:
+                    text += "• (No changelog provided)\n"
 
-                # Save notified version
-                with open(LAST_VERSION_FILE, "w") as f:
-                    f.write(rv)
+                text += "\nSend **/update** to install."
 
-        await asyncio.sleep(CHECK_INTERVAL)
+                # SEND TO SAVED MESSAGES
+                await bot.send_message("me", text)
+
+                # Save new version
+                with open(LAST_FILE, "w") as f:
+                    f.write(remote_version)
+
+        except Exception as e:
+            print(f"[auto_update_notify] Error: {e}")
+
+        await asyncio.sleep(120)  # Check every 2 minutes
+
 
 def register(bot):
     bot.loop.create_task(notify_update(bot))
