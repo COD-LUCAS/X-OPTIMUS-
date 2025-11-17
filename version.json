@@ -1,7 +1,8 @@
 {
   "version": "1.0.2",
   "changelog": [
-    "Initial public release of X-OPTIMUS",
-    "Added ping, reboot, install, menu, update system"
+    "Fixed updater bug",
+    "Improved startup speed",
+    "Better error handler"
   ]
 }
