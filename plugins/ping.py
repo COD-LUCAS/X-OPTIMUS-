@@ -1,52 +1,51 @@
-import psutil, platform, time
-from telethon import events, version
+import os
+import time
+from datetime import datetime
+from telethon import events
+
+PING_IMAGE = "assets/ping.jpg"
+
 
 def register(bot):
-    @bot.on(events.NewMessage(pattern="/ping"))
-    async def _(event):
+    
+    @bot.on(events.NewMessage(pattern=r"^/ping$"))
+    async def ping(event):
+        # Record start time
         start = time.time()
-        msg = await event.reply("⏳")
-        ping_ms = int((time.time() - start) * 1000)
+        
+        # Send initial message
+        msg = await event.reply("🏓 **Pinging...**")
+        
+        # Calculate ping time
+        end = time.time()
+        ping_time = (end - start) * 1000  # Convert to milliseconds
+        
+        # Get current time
+        current_time = datetime.now().strftime("%H:%M:%S")
+        current_date = datetime.now().strftime("%d/%m/%Y")
+        
+        # Create response text
+        text = f"""
+🤖 **X-OPTIMUS IS ALIVE!**
 
-        cpu = psutil.cpu_percent()
-        ram = psutil.virtual_memory().percent
-        disk = psutil.disk_usage("/").percent
+⚡ **Ping:** `{ping_time:.2f}ms`
+🕐 **Time:** `{current_time}`
+📅 **Date:** `{current_date}`
+🟢 **Status:** Online
 
-        boot = psutil.boot_time()
-        uptime_sec = int(time.time() - boot)
-        h = uptime_sec // 3600
-        m = (uptime_sec % 3600) // 60
-        uptime = f"{h}h {m}m"
-
-        os_info = f"{platform.system()} {platform.release()}"
-        tele = version.__version__
-
-        net1 = psutil.net_io_counters().bytes_sent, psutil.net_io_counters().bytes_recv
-        time.sleep(1)
-        net2 = psutil.net_io_counters().bytes_sent, psutil.net_io_counters().bytes_recv
-        upload = (net2[0] - net1[0]) / 1024
-        download = (net2[1] - net1[1]) / 1024
-
-        caption = (
-            "⚡ **X-OPTIMUS REAL PING REPORT** ⚡\n\n"
-            f"🏓 **Ping:** `{ping_ms} ms`\n"
-            f"🧠 **CPU:** `{cpu}%`\n"
-            f"💾 **RAM:** `{ram}%`\n"
-            f"🗂 **Disk:** `{disk}%`\n"
-            f"📤 **Upload:** `{upload:.1f} KB/s`\n"
-            f"📥 **Download:** `{download:.1f} KB/s`\n"
-            f"⏱ **Uptime:** `{uptime}`\n"
-            f"🛠 **OS:** `{os_info}`\n"
-            f"📡 **Telethon:** `{tele}`"
-        )
-
-        try:
-            await event.client.send_file(
-                event.chat_id,
-                "assets/ping.jpg",
-                caption=caption,
-                reply_to=event.id
-            )
+━━━━━━━━━━━━━━━━━━━━
+🔥 **Bot is running smoothly!**
+"""
+        
+        # Edit message with ping result
+        if os.path.exists(PING_IMAGE):
+            # Delete the "Pinging..." message
             await msg.delete()
-        except:
-            await msg.edit(caption)
+            # Send new message with image
+            await event.reply(
+                file=PING_IMAGE,
+                message=text
+            )
+        else:
+            # Just edit the text if no image
+            await msg.edit(text)
