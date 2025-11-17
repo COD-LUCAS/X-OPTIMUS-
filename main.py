@@ -4,9 +4,9 @@ import platform
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from dotenv import load_dotenv
+from keepalive import keep_alive   # <--- required for Render
 
-from keep_alive import keep_alive  # <--- IMPORTANT
-
+# Load env
 load_dotenv("config.env")
 
 API_ID = int(os.getenv("API_ID"))
@@ -43,7 +43,7 @@ async def run_startup_events():
 
 async def start_bot():
 
-    keep_alive()  # <---- START WEB SERVER BEFORE BOT
+    keep_alive()  # <-- REQUIRED: prevents Render shutdown
 
     print(BORDER)
     print("🚀 X-OPTIMUS USERBOT STARTING…")
@@ -52,16 +52,15 @@ async def start_bot():
     plugin_count = load_plugins()
 
     pretty_log("🆔 API ID", API_ID)
-    pretty_log("👁 Platform", platform.system())
     pretty_log("📦 Plugins", plugin_count)
-    pretty_log("🔧 Telethon", "1.x")
+    pretty_log("🖥 Platform", platform.system())
 
     print(BORDER)
 
     await bot.start()
     await run_startup_events()
 
-    print("🟢 BOT ONLINE & RUNNING SUCCESSFULLY")
+    print("🟢 BOT ONLINE ✔")
     print(BORDER)
 
 bot.loop.run_until_complete(start_bot())
