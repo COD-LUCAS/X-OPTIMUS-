@@ -7,7 +7,7 @@ from telethon.sessions import StringSession
 from flask import Flask
 from dotenv import load_dotenv
 
-load_dotenv("/home/container_data/config.env")
+load_dotenv("container_data/config.env")
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
@@ -55,7 +55,7 @@ async def start_bot():
     print(f"API ID        : {API_ID}")
     print(f"Platform      : {platform.system()}")
     print(f"Plugins       : {plugin_count}")
-    print(f"Telethon      : 1.x")
+    print("Telethon      : 1.x")
     print(border)
 
     await bot.start()
