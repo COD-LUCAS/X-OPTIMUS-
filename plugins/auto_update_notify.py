@@ -5,7 +5,7 @@ import asyncio
 import os
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
-CHECK_INTERVAL = 21600  # 6 hours
+CHECK_INTERVAL = 300
 
 LAST_VERSION_FILE = "last_checked_version.txt"
 
