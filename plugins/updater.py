@@ -1,89 +1,112 @@
 from telethon import events
 import os
 import sys
-import json
+import requests
 import zipfile
 import shutil
-import requests
 import certifi
 
-VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
+VERSION_FILE = "version.txt"
+REMOTE_VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.txt"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
-def parse(v):
+
+# ------------------------------------------
+# Get Local Version
+# ------------------------------------------
+def get_local_version():
     try:
-        return tuple(map(int, v.split(".")))
+        with open(VERSION_FILE, "r") as f:
+            return f.read().strip()
     except:
-        return (0,)
+        return "0"
 
-def local_version():
+
+# ------------------------------------------
+# Get Remote Version
+# ------------------------------------------
+def get_remote_version():
     try:
-        with open("version.json", "r") as f:
-            return json.load(f).get("version", "0.0.0")
+        r = requests.get(REMOTE_VERSION_URL, verify=certifi.where())
+        return r.text.strip()
     except:
-        return "0.0.0"
+        return None
 
-def remote_version():
-    r = requests.get(VERSION_URL, verify=certifi.where()).json()
-    return r.get("version", "0.0.0"), r.get("changelog", [])
 
-def find_extracted_folder():
-    items = os.listdir("update_temp")
-    for i in items:
-        path = os.path.join("update_temp", i)
-        if os.path.isdir(path):
-            return path
+# ------------------------------------------
+# Find extracted GitHub folder
+# ------------------------------------------
+def find_folder():
+    for item in os.listdir("update_temp"):
+        p = os.path.join("update_temp", item)
+        if os.path.isdir(p):
+            return p
     return None
 
 
+# ------------------------------------------
+# Register commands
+# ------------------------------------------
 def register(bot):
 
-    # ---------- CHECK UPDATE ----------
+    # CHECK UPDATE
     @bot.on(events.NewMessage(pattern="/checkupdate"))
     async def check(event):
+        local = get_local_version()
+        remote = get_remote_version()
 
-        msg = await event.reply("🔍 Checking updates…")
+        if remote is None:
+            await event.reply("❌ Could not check version (network error).")
+            return
 
-        lv = local_version()
-        rv, changes = remote_version()
-
-        if parse(rv) > parse(lv):
-            cl = "\n• " + "\n• ".join(changes) if changes else ""
-            await msg.edit(
-                f"🟡 **Update Available!**\n\n"
-                f"➡ Current: **{lv}**\n"
-                f"➡ Latest: **{rv}**\n"
-                f"{cl}\n\nUse **/update** to install."
-            )
+        if local == remote:
+            await event.reply(f"✔ **Bot is up-to-date!**\nVersion: `{local}`")
         else:
-            await msg.edit(f"✔ **Bot is already up-to-date!**\nVersion: **{lv}**")
+            await event.reply(
+                f"🟡 **Update Available!**\n"
+                f"Current: `{local}`\n"
+                f"Latest: `{remote}`\n"
+                f"Run `/update` to install."
+            )
 
-    # ---------- INSTALL UPDATE ----------
+    # UPDATE INSTALL
     @bot.on(events.NewMessage(pattern="/update"))
     async def update(event):
 
-        msg = await event.reply("⬇ Downloading latest version…")
+        local = get_local_version()
+        remote = get_remote_version()
+
+        if remote is None:
+            await event.reply("❌ Update error: cannot fetch version.")
+            return
+
+        # If same version → skip update
+        if local == remote:
+            await event.reply(f"✔ **Already up-to-date!**\nVersion: `{local}`")
+            return
+
+        msg = await event.reply("⬇ Downloading update...")
 
         try:
+            # DOWNLOAD ZIP
             r = requests.get(ZIP_URL, verify=certifi.where())
             with open("update.zip", "wb") as f:
                 f.write(r.content)
 
-            await msg.edit("📦 Extracting update…")
+            await msg.edit("📦 Extracting update...")
 
+            # EXTRACT
             with zipfile.ZipFile("update.zip", "r") as z:
                 z.extractall("update_temp")
 
-            folder = find_extracted_folder()
+            folder = find_folder()
             if not folder:
-                await msg.edit("❌ Update failed!\nCould not detect extracted folder.")
+                await msg.edit("❌ Update failed (folder not found).")
                 return
 
-            src = folder
-
-            # Delete old files except config
+            # REMOVE OLD FILES (safe)
             for item in os.listdir():
-                if item in ["config", "update_temp", "update.zip"]:
+                if item in ["config", "update.zip", "update_temp"]:
                     continue
                 try:
                     if os.path.isfile(item):
@@ -93,9 +116,9 @@ def register(bot):
                 except:
                     pass
 
-            # Copy new files
-            for item in os.listdir(src):
-                s = os.path.join(src, item)
+            # COPY NEW FILES
+            for item in os.listdir(folder):
+                s = os.path.join(folder, item)
                 d = os.path.join(".", item)
 
                 if os.path.isdir(s):
@@ -103,7 +126,11 @@ def register(bot):
                 else:
                     shutil.copy2(s, d)
 
-            await msg.edit("✅ **Update Installed Successfully!**\n🔄 Restarting…")
+            # SAVE NEW VERSION
+            with open("version.txt", "w") as f:
+                f.write(remote)
+
+            await msg.edit("✅ **Update Installed!**\n🔄 Restarting bot...")
 
             os.execv(sys.executable, ['python'] + sys.argv)
 
