@@ -1,7 +1,20 @@
-from fastapi import FastAPI
+# webserver.py
+from flask import Flask
+import threading
+import os
 
-app = FastAPI()
+app = Flask(__name__)
 
-@app.get("/")
+@app.route("/")
 def home():
-    return {"status": "X-OPTIMUS USERBOT ACTIVE"}
+    return "X-OPTIMUS RUNNING ✔"
+
+def run():
+    port = int(os.environ.get("PORT", 8080))
+    print(f"[WebServer] Starting on port {port}...")
+    app.run(host="0.0.0.0", port=port)
+
+def start_webserver():
+    thread = threading.Thread(target=run)
+    thread.daemon = True
+    thread.start()
