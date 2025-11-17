@@ -1,17 +1,15 @@
 from flask import Flask
-from threading import Thread
-import os
+import threading
 
-app = Flask(__name__)
+app = Flask('XOPTIMUS')
 
-@app.route("/")
+@app.route('/')
 def home():
     return "X-OPTIMUS USERBOT ACTIVE"
 
 def run():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=8080)
 
 def keep_alive():
-    thread = Thread(target=run)
-    thread.start()
+    t = threading.Thread(target=run)
+    t.start()
