@@ -1,5 +1,5 @@
 from flask import Flask
-import threading
+from threading import Thread
 import os
 
 app = Flask(__name__)
@@ -13,5 +13,5 @@ def run():
     app.run(host="0.0.0.0", port=port)
 
 def keep_alive():
-    thread = threading.Thread(target=run)
+    thread = Thread(target=run)
     thread.start()
