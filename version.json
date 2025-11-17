@@ -1,8 +1,8 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.1",
   "changelog": [
-    "Fixed updater bug",
-    "Improved startup speed",
-    "Better error handler"
+    "Improved updater",
+    "Fixed session issue",
+    "Panel compatible"
   ]
 }
