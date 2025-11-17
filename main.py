@@ -6,16 +6,16 @@ from telethon.sessions import StringSession
 from dotenv import load_dotenv
 
 # ----------------------------------------------------------
-# LOAD CONFIG FROM container_data FIRST (safe for Panel/Render)
+# LOAD CONFIG (OptiKLink uses /home/container only)
 # ----------------------------------------------------------
-CONTAINER_CONFIG = "/home/container_data/config.env"
+CONFIG_PATH = "/home/container/config.env"
 
-if os.path.exists(CONTAINER_CONFIG):
-    print("[CONFIG] Loading container_data/config.env")
-    load_dotenv(CONTAINER_CONFIG)
+if os.path.exists(CONFIG_PATH):
+    print("[CONFIG] Loading /home/container/config.env")
+    load_dotenv(CONFIG_PATH)
 else:
-    print("[CONFIG] Loading local config.env")
-    load_dotenv("config/config.env")
+    print("[CONFIG] config.env NOT FOUND! Exiting...")
+    exit(1)
 
 # ----------------------------------------------------------
 # READ CONFIG VALUES
@@ -69,7 +69,7 @@ def load_plugins():
     return count
 
 # ----------------------------------------------------------
-# RUN STARTUP EVENTS (startup.py)
+# RUN STARTUP EVENTS
 # ----------------------------------------------------------
 async def run_startup_events():
     for module in plugins.values():
@@ -104,7 +104,7 @@ async def start_bot():
     print(BORDER)
 
 # ----------------------------------------------------------
-# RUN
+# RUN BOT
 # ----------------------------------------------------------
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
