@@ -6,6 +6,35 @@
 
 A powerful Telegram bot built with Python.
 
+⚠️ IMPORTANT UPDATE SAFETY WARNING
+<div align="center">
+<div style="
+background-color: #ffcccc;
+border: 2px solid #cc0000;
+color: #cc0000;
+padding: 15px;
+border-radius: 8px;
+font-weight: 700;
+width: 90%;
+margin: 20px auto;
+text-align: center;
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+">
+🚨 WARNING: HIGHLY INTERCONNECTED CODEBASE 🚨
+
+
+
+All files are interconnected and will be overwritten during the update.
+
+
+The ONLY file protected from changes is <code style="background-color: #ff9999; padding: 3px 6px; border-radius: 3px;">config_data/config.env</code>.
+
+
+
+DO NOT make local changes to any other script or plugin outside of this file!
+</div>
+</div>
+
 ---
 
 ## **REQUIREMENTS**
@@ -86,7 +115,7 @@ IT WILL UPADTE AUTOMATICALLY NO NEED TO UPDATE COMMAND
 6. **Start the Bot**: Click start and your bot will begin running
 7. <div align="center">
 <div style="background-color: #f1f1f1; color: black; padding: 10px; border-radius: 5px; width: 60%; margin: 10px auto; font-family: monospace;">
-/update
+/update COMMAND MUST BE USED FOR UP TO DATE USE
 </div>
 </div>
 
