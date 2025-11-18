@@ -11,11 +11,13 @@ ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
 LOCAL_VERSION_FILE = "version.json"
 
-SAFE_FILES = [
-    "container_data/config.env",
-    "update_temp",
-    "update.zip",
-]
+# Files and folders to NEVER delete during update
+SAFE_FILES = {
+    "container_data",  # Protect entire folder
+    "config.env",
+    "update_temp",     # Don't delete during update
+    "update.zip",      # Don't delete during update
+}
 
 def read_local_version():
     if not os.path.exists(LOCAL_VERSION_FILE):
@@ -28,8 +30,11 @@ def read_local_version():
 
 def read_remote_version():
     try:
-        r = requests.get(VERSION_URL, verify=False)  # Disable SSL verification
-        return r.json().get("version", "0.0.0"), r.json().get("changelog", [])
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        r = requests.get(VERSION_URL, verify=False)
+        data = r.json()
+        return data.get("version", "0.0.0"), data.get("changelog", [])
     except:
         return None, None
 
@@ -61,7 +66,7 @@ def register(bot):
             import urllib3
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             
-            # Download update (with SSL verification disabled)
+            # Download update
             r = requests.get(ZIP_URL, verify=False)
             r.raise_for_status()
             
@@ -76,38 +81,49 @@ def register(bot):
 
             # Find extracted folder name
             folder = os.listdir("update_temp")[0]  
-            src = os.path.join("update_temp", folder)  
+            src = os.path.join("update_temp", folder)
+            
+            # Verify source exists
+            if not os.path.exists(src):
+                raise Exception(f"Extracted folder not found: {src}")
 
             await msg.edit("🔄 Installing update...")
 
-            # Delete old files (except protected ones)
-            for item in os.listdir():  
-                if item in SAFE_FILES or item.startswith('.'):
-                    continue  
-                try:  
-                    if os.path.isfile(item):  
-                        os.remove(item)  
-                    elif os.path.isdir(item):  
-                        shutil.rmtree(item)  
-                except Exception as e:
-                    print(f"Could not delete {item}: {e}")
-
-            # Copy new files
+            # Copy new files FIRST (before deleting anything)
             for item in os.listdir(src):  
                 s = os.path.join(src, item)  
                 d = os.path.join(".", item)  
                 
+                # Skip protected items
+                if item in SAFE_FILES:
+                    continue
+                
                 try:
+                    # Remove destination if exists
+                    if os.path.exists(d):
+                        if os.path.isdir(d):
+                            shutil.rmtree(d)
+                        else:
+                            os.remove(d)
+                    
+                    # Copy new files
                     if os.path.isdir(s):  
-                        shutil.copytree(s, d, dirs_exist_ok=True)  
+                        shutil.copytree(s, d)  
                     else:  
                         shutil.copy2(s, d)
                 except Exception as e:
-                    print(f"Could not copy {item}: {e}")
+                    print(f"Could not update {item}: {e}")
 
             # Clean up temp files
-            shutil.rmtree("update_temp")  
-            os.remove("update.zip")  
+            try:
+                shutil.rmtree("update_temp")
+            except:
+                pass
+            
+            try:
+                os.remove("update.zip")
+            except:
+                pass
 
             await msg.edit("✅ Update Installed!\n♻️ Restarting bot...")  
 
@@ -121,6 +137,10 @@ def register(bot):
             try:
                 if os.path.exists("update_temp"):
                     shutil.rmtree("update_temp")
+            except:
+                pass
+            
+            try:
                 if os.path.exists("update.zip"):
                     os.remove("update.zip")
             except:
