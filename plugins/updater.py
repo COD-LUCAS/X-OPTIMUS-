@@ -6,7 +6,7 @@ ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
 SAFE = [
     "container_data",
-    "plugins/user_plugins",
+    "plugins/user_plugins"
 ]
 
 def local_ver():
