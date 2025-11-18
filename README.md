@@ -41,6 +41,11 @@ Click the button above to deploy directly to Render. The `render.yaml` file is a
 - `SESSION_STRING` - Your session string from the link above
 
 Simply fill in these variables during deployment and your bot will be up and running!
+<div align="center">
+<div style="background-color: black; color: white; padding: 10px; border-radius: 5px; font-weight: bold; width: 80%; margin: 10px auto;">
+IT WILL UPADTE AUTOMATICALLY NO NEED TO UPDATE COMMAND
+</div>
+</div>
 
 ---
 
@@ -60,6 +65,11 @@ Click the button above to deploy directly to Koyeb. The `koyeb.yaml` file is alr
 - `SESSION_STRING` - Your session string from the link above
 
 Your bot will be deployed and running on Koyeb's infrastructure!
+<div align="center">
+<div style="background-color: black; color: white; padding: 10px; border-radius: 5px; font-weight: bold; width: 80%; margin: 10px auto;">
+IT WILL UPADTE AUTOMATICALLY NO NEED TO UPDATE COMMAND
+</div>
+</div>
 
 ---
 
@@ -74,6 +84,11 @@ Your bot will be deployed and running on Koyeb's infrastructure!
    - `API_HASH`
    - `SESSION_STRING`
 6. **Start the Bot**: Click start and your bot will begin running
+7. <div align="center">
+<div style="background-color: #f1f1f1; color: black; padding: 10px; border-radius: 5px; width: 60%; margin: 10px auto; font-family: monospace;">
+/update
+</div>
+</div>
 
 ---
 
