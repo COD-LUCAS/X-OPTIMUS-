@@ -54,12 +54,12 @@ def register(bot):
             plug = ""
 
         text = f"""**Available Commands:**
-
+__________________________________
 
 {core}{plug}
+__________________________________
 
-
-
+Use /help <command> for details"""
 
         try:
             await event.react("📋")
