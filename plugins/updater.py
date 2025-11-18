@@ -39,7 +39,7 @@ def safe(p):
             return True
     return False
 
-def find_folder(root):
+def find_real_folder(root):
     for d, dirs, files in os.walk(root):
         if "main.py" in files:
             return d
@@ -54,10 +54,10 @@ def register(bot):
         if lv == rv:
             await event.reply(f"✔ Bot is up-to-date\nVersion: {lv}")
         else:
-            txt = f"⚠ Update Available\nCurrent: {lv}\nLatest: {rv}\n\n"
-            txt += "\n".join([f"- {c}" for c in changes])
-            txt += "\n\nUse /update to install."
-            await event.reply(txt)
+            msg = f"⚠ Update Available\nCurrent: {lv}\nLatest: {rv}\n\n"
+            msg += "\n".join([f"- {c}" for c in changes])
+            msg += "\n\nUse /update to install."
+            await event.reply(msg)
 
     @bot.on(events.NewMessage(pattern="/update"))
     async def update(event):
@@ -66,14 +66,14 @@ def register(bot):
             r = requests.get(ZIP_URL, verify=False)
             open("update.zip", "wb").write(r.content)
 
-            await m.edit("Extracting...")
+            await m.edit("Extracting update...")
 
             with zipfile.ZipFile("update.zip", "r") as z:
                 z.extractall("update_temp")
 
-            folder = find_folder("update_temp")
+            folder = find_real_folder("update_temp")
             if not folder:
-                await m.edit("Update failed: main.py not found")
+                await m.edit("Update failed: main.py not found in downloaded ZIP")
                 return
 
             for item in os.listdir():
