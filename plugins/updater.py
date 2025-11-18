@@ -1,106 +1,111 @@
+import os, json, shutil, zipfile, requests
 from telethon import events
-import os, json, requests, zipfile, shutil, sys
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
-SAFE = [
-    "container_data",
-    "plugins/user_plugins",
-    "version.json"
-]
+SAFE = ["container_data", "plugins/user_plugins", "version.json"]
 
-def local_ver():
+
+def get_local_version():
     try:
         return json.load(open("version.json")).get("version", "0.0.0")
     except:
         return "0.0.0"
 
-def remote_ver():
+
+def get_remote():
     try:
-        r = requests.get(VERSION_URL, verify=False).json()
+        r = requests.get(VERSION_URL, timeout=10, verify=False).json()
         return r.get("version"), r.get("changelog", [])
     except:
         return None, None
 
+
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern="/checkupdate"))
-    async def check(event):
-        await event.reply("🔍 Checking for updates...")
-        lv = local_ver()
-        rv, log = remote_ver()
+    @bot.on(events.NewMessage(pattern=r"^/checkupdate$"))
+    async def checkupdate(event):
+        lv = get_local_version()
+        rv, log = get_remote()
 
-        if not rv:
-            await event.reply("❌ Could not fetch update info.")
+        if rv is None:
+            await event.reply("❌ Cannot fetch update info.")
             return
 
         if lv == rv:
-            await event.reply(f"✔ Bot is up-to-date.\nVersion: {lv}")
-        else:
-            txt = (
-                f"⚠ X-OPTIMUS NEW UPDATE IS THERE\n\n"
-                f"🟣 CURRENT VERSION: {lv}\n"
-                f"🟢 LATEST VERSION: {rv}\n\n"
-                f"📌 CHANGE LOG:\n"
-            )
-            for i in log:
-                txt += f" - {i}\n"
-            txt += "\nFOR UPDATE /update"
-            await event.reply(txt)
+            await event.reply(f"✅ Bot is already up-to-date.\nVersion: {lv}")
+            return
 
-    @bot.on(events.NewMessage(pattern="/update"))
+        txt = f"⚠️ **X-OPTIMUS NEW UPDATE IS THERE**\n\n"
+        txt += f"🟣 CURRENT VERSION: `{lv}`\n"
+        txt += f"🟢 LATEST VERSION: `{rv}`\n\n"
+        txt += "📄 **CHANGE LOG:**\n"
+        for i in log:
+            txt += f"• {i}\n"
+        txt += "\n➡️ Update using: `/update`"
+
+        await event.reply(txt)
+
+    @bot.on(events.NewMessage(pattern=r"^/update$"))
     async def update(event):
-        msg = await event.reply("⬇ Downloading update...")
+        msg = await event.reply("⬇️ Downloading update...")
 
         try:
-            data = requests.get(ZIP_URL, verify=False).content
+            data = requests.get(ZIP_URL, timeout=20, verify=False).content
             open("update.zip", "wb").write(data)
+        except Exception as e:
+            await msg.edit(f"❌ Update failed:\n`{e}`")
+            return
 
-            await msg.edit("📦 Extracting...")
+        await msg.edit("📦 Extracting update...")
 
-            with zipfile.ZipFile("update.zip", "r") as z:
+        try:
+            with zipfile.ZipFile("update.zip") as z:
                 z.extractall("update_temp")
+        except Exception as e:
+            await msg.edit(f"❌ Extraction failed:\n`{e}`")
+            return
 
-            dirs = [
-                d for d in os.listdir("update_temp")
-                if os.path.isdir(os.path.join("update_temp", d))
-            ]
-
+        # FIND REAL FOLDER (GitHub renames it automatically)
+        try:
+            dirs = [d for d in os.listdir("update_temp") if os.path.isdir(os.path.join("update_temp", d))]
             if not dirs:
-                await msg.edit("❌ Update failed: No extracted folder found.")
+                await msg.edit("❌ Update failed: extracted folder missing.")
                 return
 
             src = os.path.join("update_temp", dirs[0])
 
-            await msg.edit("🔄 Replacing files...")
+        except Exception as e:
+            await msg.edit(f"❌ Update failed:\n`{e}`")
+            return
 
-            for x in os.listdir():
-                safe_match = any(x == s or x.startswith(s) for s in SAFE)
-                if safe_match:
+        await msg.edit("♻️ Replacing files...")
+
+        try:
+            for item in os.listdir():
+                if item in SAFE:
+                    continue
+                if item.startswith("."):
                     continue
 
-                try:
-                    if os.path.isfile(x):
-                        os.remove(x)
-                    else:
-                        shutil.rmtree(x)
-                except:
-                    pass
+                if os.path.isfile(item):
+                    os.remove(item)
+                else:
+                    shutil.rmtree(item)
 
             for item in os.listdir(src):
                 s = os.path.join(src, item)
-                d = os.path.join(".", item)
+                d = os.path.join(item)
+                if item in SAFE:
+                    continue
                 if os.path.isdir(s):
-                    shutil.copytree(s, d, dirs_exist_ok=True)
+                    shutil.copytree(s, d)
                 else:
                     shutil.copy2(s, d)
 
-            shutil.rmtree("update_temp")
-            os.remove("update.zip")
-
-            await msg.edit("✅ Update Installed!\n♻ Restarting bot...")
-            os.execv(sys.executable, ["python3"] + sys.argv)
-
         except Exception as e:
             await msg.edit(f"❌ Update failed during replace:\n`{e}`")
+            return
+
+        await msg.edit("✅ Update installed!\nPlease restart your bot.")
