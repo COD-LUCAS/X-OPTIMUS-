@@ -1,40 +1,56 @@
-import os
 import time
-from datetime import datetime
-from telethon import events
+import os
+from telethon import events, Button
 
-PING_IMAGE = "assets/ping.jpg"
-PING_GIF = "https://i.gifer.com/YCZH.gif"  # Animated hourglass GIF
+# Define the path for your ping asset
+PING_ASSET_PATH = "assets/ping.jpg"
+# You can use a URL for the GIF if you prefer not to store it locally
+PING_GIF_URL = "https://i.imgur.com/GzG9l6n.gif" # Example fast-loading GIF
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/ping$"))
-    async def ping(event):
+    async def ping_command(event):
+        # 1. Start timer and react
+        start_time = time.time()
+        
+        # React to the user's message
+        await event.react("⚡️") 
 
-        start = time.time()
+        # 2. Send the GIF and asset
+        try:
+            # Check if the local asset exists, otherwise fall back to the GIF URL
+            if os.path.exists(PING_ASSET_PATH):
+                # Send the JPG file you mentioned
+                message_sent = await event.reply(
+                    f"Testing connection...",
+                    file=PING_ASSET_PATH,
+                    buttons=[Button.inline("Calculating...", data="ping_temp")]
+                )
+            else:
+                # Send the GIF if the JPG is not found, or use a better GIF path
+                message_sent = await event.reply(
+                    f"Testing connection...",
+                    file=PING_GIF_URL,
+                    buttons=[Button.inline("Calculating...", data="ping_temp")]
+                )
 
-        # Send animated hourglass GIF
-        loading = await event.reply(file=PING_GIF)
+        except Exception as e:
+            # Handle potential file/network errors during send
+            await event.reply(f"❌ Failed to send asset: `{e}`")
+            return
 
-        end = time.time()
-        ping_time = (end - start) * 1000
+        # 3. Calculate and display results
+        end_time = time.time()
+        
+        # Calculate the total time elapsed for the round-trip (start -> send -> end)
+        ping_ms = round((end_time - start_time) * 1000) 
+        
+        # Create the response text
+        response_text = f"**Pong!** 🏓\n"
+        response_text += f"**Latency:** `{ping_ms} ms`\n"
+        response_text += f"**Asset:** `assets/ping.jpg` {'✅ Found' if os.path.exists(PING_ASSET_PATH) else '⚠️ Not Found'}"
+        
+        # Edit the sent message to display the final result
+        await message_sent.edit(response_text)
 
-        current_time = datetime.now().strftime("%H:%M:%S")
-        current_date = datetime.now().strftime("%d/%m/%Y")
-
-        text = f"""
-**🚀 X-OPTIMUS IS ALIVE!**
-
-🟣 **Ping:** `{ping_time:.2f}ms`
-🔵 **Time:** `{current_time}`
-🟢 **Date:** `{current_date}`
-🟡 **Status:** Online
-
-✨ *Bot is running smoothly!* ✨
-"""
-
-        # Replace GIF with final ping message + image if available
-        if os.path.exists(PING_IMAGE):
-            await loading.edit(file=PING_IMAGE, message=text)
-        else:
-            await loading.edit(text)
