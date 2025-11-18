@@ -4,7 +4,7 @@ import os, json, requests, zipfile, shutil, sys
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
-SAFE_KEEP = [
+SAFE = [
     "container_data",
     "plugins/user_plugins",
     "version.json"
@@ -31,74 +31,77 @@ def register(bot):
         rv, log = remote_ver()
 
         if not rv:
-            await event.reply("❌ Cannot fetch version.")
+            await event.reply("❌ Cannot fetch update info.")
             return
 
         if lv == rv:
-            await event.reply(f"✔ Up to date\nVersion {lv}")
+            await event.reply(f"✔ Bot is up-to-date\nVersion: {lv}")
         else:
-            text = (
-                "⚠ X-OPTIMUS NEW UPDATE IS THERE\n\n"
-                f"CURRENT VERSION: {lv}\n"
-                f"LATEST VERSION: {rv}\n\n"
-                "CHANGE LOG:\n" +
-                "\n".join(f" - {c}" for c in log) +
-                "\n\nFor update: /update"
-            )
-            await event.reply(text)
+            msg = "⚠ X-OPTIMUS NEW UPDATE IS THERE\n\n"
+            msg += f"CURRENT VERSION: {lv}\n"
+            msg += f"LATEST VERSION: {rv}\n\n"
+            msg += "CHANGE LOG:\n"
+            for i in log:
+                msg += f" - {i}\n"
+            msg += "\nFOR UPDATE: /update"
+            await event.reply(msg)
 
     @bot.on(events.NewMessage(pattern="/update"))
-    async def updater(event):
-        msg = await event.reply("⬇ Downloading update...")
+    async def update(event):
+        msg = await event.reply("⬇ Downloading...")
 
         try:
-            content = requests.get(ZIP_URL, verify=False).content
-            open("update.zip", "wb").write(content)
+            data = requests.get(ZIP_URL, verify=False).content
+            open("update.zip", "wb").write(data)
         except Exception as e:
             await msg.edit(f"❌ Update failed:\n{e}")
             return
 
-        # Extract
+        await msg.edit("📦 Extracting...")
+
         try:
             with zipfile.ZipFile("update.zip") as z:
                 z.extractall("update_temp")
         except Exception as e:
-            await msg.edit(f"❌ Extraction failed:\n{e}")
+            await msg.edit(f"❌ Extract failed:\n{e}")
             return
 
-        # Find extracted folder automatically
+        # FIND CORRECT FOLDER DYNAMICALLY
         try:
-            folders = [f for f in os.listdir("update_temp")]
-            if not folders:
-                await msg.edit("❌ Extracted folder missing.")
+            dirs = []
+            for d in os.listdir("update_temp"):
+                p = os.path.join("update_temp", d)
+                if os.path.isdir(p):
+                    dirs.append(p)
+
+            if not dirs:
+                await msg.edit("❌ Update failed: extracted folder missing.")
                 return
 
-            src = os.path.join("update_temp", folders[0])
-            if not os.path.isdir(src):
-                await msg.edit("❌ Extracted folder invalid.")
-                return
-        except:
-            await msg.edit("❌ Cannot read extracted folder.")
+            src = dirs[0]  # ALWAYS CORRECT
+        except Exception as e:
+            await msg.edit(f"❌ Update failed during folder detection:\n{e}")
             return
 
-        # Safe replacement (ONLY after full extraction success)
+        await msg.edit("🔄 Replacing files...")
+
         try:
-            for item in os.listdir():
-                if item in SAFE_KEEP:
+            # DELETE all except SAFE folders
+            for x in os.listdir():
+                if x in SAFE:
                     continue
                 try:
-                    path = os.path.join(".", item)
-                    if os.path.isfile(path):
-                        os.remove(path)
+                    if os.path.isfile(x):
+                        os.remove(x)
                     else:
-                        shutil.rmtree(path)
+                        shutil.rmtree(x)
                 except:
                     pass
 
-            # Copy new files
-            for item in os.listdir(src):
-                s = os.path.join(src, item)
-                d = os.path.join(".", item)
+            # COPY new files
+            for x in os.listdir(src):
+                s = os.path.join(src, x)
+                d = os.path.join(".", x)
                 if os.path.isdir(s):
                     shutil.copytree(s, d, dirs_exist_ok=True)
                 else:
@@ -107,7 +110,7 @@ def register(bot):
             shutil.rmtree("update_temp")
             os.remove("update.zip")
 
-            await msg.edit("✅ Update complete.\n♻ Restarting...")
+            await msg.edit("✅ Update Complete!\n♻ Restarting bot...")
             os.execv(sys.executable, ["python3"] + sys.argv)
 
         except Exception as e:
