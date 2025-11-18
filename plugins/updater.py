@@ -1,8 +1,8 @@
 from telethon import events
 import os, json, requests, zipfile, shutil, sys
 
-VERSION_URL = "https://raw.githubusercontent.com/COD-LUC4S/X-OPTIMUS/main/version.json"
-ZIP_URL = "https://github.com/COD-LUC4S/X-OPTIMUS/archive/refs/heads/main.zip"
+VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
+ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
 SAFE = [
     "container_data",
