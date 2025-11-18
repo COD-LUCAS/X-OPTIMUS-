@@ -5,13 +5,14 @@ MENU_IMAGE = "assets/menu.jpg"  # keep your menu.jpg here
 
 # Core commands that are always available
 CORE_COMMANDS = [
-    {"cmd": "menu", "desc": "Show this command menu", "icon": "📋"},
-    {"cmd": "alive", "desc": "Check if bot is running", "icon": "💚"},
-    {"cmd": "checkupdate", "desc": "Check for updates", "icon": "🔍"},
-    {"cmd": "update", "desc": "Update the bot", "icon": "⬆️"},
-    {"cmd": "ping", "desc": "Check bot response time", "icon": "🏓"},
-    {"cmd": "mode", "desc": "Change bot mode", "icon": "⚙️"},
-    {"cmd": "install", "desc": "Install new plugins", "icon": "📥"}
+    "menu",
+    "alive", 
+    "checkupdate",
+    "update",
+    "ping",
+    "mode",
+    "install",
+    "reboot"
 ]
 
 
@@ -20,12 +21,17 @@ def get_installed_plugins():
     plugins = []
     plugins_dir = "plugins"
     
-    # Core plugin files to exclude
-    core_files = ["menu.py", "alive.py", "updater.py", "ping.py", "mode.py", "install.py", "__init__.py"]
+    # Files to exclude from plugin list
+    exclude_files = [
+        "menu.py", "alive.py", "updater.py", "ping.py", 
+        "mode.py", "install.py", "__init__.py",
+        "auto_update_notify.py", "startup.py", "reboot.py",
+        "sudo.py", "checkupdate.py", "update.py"
+    ]
     
     if os.path.exists(plugins_dir):
         for file in os.listdir(plugins_dir):
-            if file.endswith(".py") and file not in core_files:
+            if file.endswith(".py") and file not in exclude_files:
                 name = file[:-3]  # Remove .py extension
                 plugins.append(name)
     
@@ -42,57 +48,38 @@ def register(bot):
         installed_plugins = get_installed_plugins()
         total_plugins = len(installed_plugins)
         
-        # Build core commands section
-        core_cmds = ""
-        for cmd in CORE_COMMANDS:
-            core_cmds += f"{cmd['icon']} `/{cmd['cmd']}` - {cmd['desc']}\n"
+        # Build core commands list
+        core_list = "\n".join([f"• {cmd}" for cmd in CORE_COMMANDS])
         
-        # Build installed plugins section
+        # Build installed plugins list
         if installed_plugins:
-            plugin_list = ""
-            for i, plugin in enumerate(installed_plugins, 1):
-                plugin_list += f"  {i}. `/{plugin}`\n"
-            
+            plugin_list = "\n".join([f"• {plugin}" for plugin in installed_plugins])
             plugins_section = f"""
-╭─────────────────────╮
-│  📦 INSTALLED PLUGINS │
-├─────────────────────┤
-│ Total: {total_plugins} plugin(s)     │
-╰─────────────────────╯
+📦 **INSTALLED PLUGINS:**
+━━━━━━━━━━━━━━━━━━━━
 
 {plugin_list}
 """
         else:
-            plugins_section = """
-╭─────────────────────╮
-│  📦 INSTALLED PLUGINS │
-├─────────────────────┤
-│ No plugins yet      │
-│ Use /install to add │
-╰─────────────────────╯
-"""
+            plugins_section = ""
         
         # Complete menu text
         text = f"""
-╔═══════════════════════════╗
-║   🤖 X-OPTIMUS BOT MENU   ║
-╚═══════════════════════════╝
+🤖 **X-OPTIMUS COMMAND MENU**
 
-╭─────────────────────╮
-│   ⚡ CORE COMMANDS   │
-╰─────────────────────╯
+📊 **Total Plugins:** {total_plugins}
 
-{core_cmds}
+━━━━━━━━━━━━━━━━━━━━
+⚡ **CORE COMMANDS:**
+━━━━━━━━━━━━━━━━━━━━
+
+{core_list}
 {plugins_section}
+━━━━━━━━━━━━━━━━━━━━
+💡 **Usage:** /{'{command}'}
+📦 **Version:** Telethon 1.42.0
 
-╭─────────────────────╮
-│      ℹ️ INFO         │
-╰─────────────────────╯
-📦 Version: Telethon 1.42.0
-💡 Usage: /{'{command}'}
-📖 Help: /help <command>
-
-═══════════════════════════
+Use /help <command> for details
 """
         
         # Add reaction to user's message
