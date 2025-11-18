@@ -66,12 +66,14 @@ Your bot will be deployed and running on Koyeb's infrastructure!
 ### **3. Deploy on Panel**
 
 1. **Upload Files**: Upload all bot files to your panel
-2. **Set Startup Command**: Set `main.py` as the startup file
-3. **Configure Environment Variables**: Add the following environment variables:
+2. **unzip**:If it is zip uzip it
+3. **MOVE FILES**:Move files to container (../)
+4. **Set Startup Command**: Set `main.py` as the startup file
+5. **Configure Environment Variables**: Add the following env variable in container_data/config.env:
    - `API_ID`
    - `API_HASH`
    - `SESSION_STRING`
-4. **Start the Bot**: Click start and your bot will begin running
+6. **Start the Bot**: Click start and your bot will begin running
 
 ---
 
