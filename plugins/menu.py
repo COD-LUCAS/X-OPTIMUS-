@@ -57,9 +57,7 @@ def register(bot):
 __________________________________
 
 {core}{plug}
-__________________________________
-
-Use /help <command> for details"""
+__________________________________"""
 
         try:
             await event.react("📋")
