@@ -1,10 +1,16 @@
 from telethon import events
 import os, json, requests, zipfile, shutil, sys, ssl
 
-cafile = "/etc/ssl/certs/ca-certificates.crt"
-ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=cafile)
-_old = requests.request
-requests.request = lambda method, url, **kw: _old(method, url, verify=cafile, **kw)
+CA = "assets/ca-bundle.crt"
+
+sys.modules['certifi'] = __import__('builtins')
+ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=CA)
+
+_base = requests.request
+def req(method, url, **kw):
+    kw["verify"] = CA
+    return _base(method, url, **kw)
+requests.request = req
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
@@ -25,9 +31,9 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/checkupdate$"))
     async def check(event):
         try:
-            r = requests.get(VERSION_URL).json()
-            remote = r.get("version", "0.0.0")
-            log = r.get("changelog", [])
+            d = requests.get(VERSION_URL).json()
+            remote = d.get("version", "0.0.0")
+            log = d.get("changelog", [])
             if os.path.exists("version.json"):
                 local = json.load(open("version.json")).get("version", "0.0.0")
             else:
@@ -44,6 +50,7 @@ def register(bot):
         except Exception as e:
             await event.reply(f"❌ Failed:\n`{e}`")
 
+
     @bot.on(events.NewMessage(pattern=r"^/update$"))
     async def update(event):
         msg = await event.reply("⬇️ Downloading update...")
@@ -57,8 +64,8 @@ def register(bot):
 
             extracted = os.listdir("update_temp")
             src = None
-            for i in extracted:
-                p = os.path.join("update_temp", i)
+            for item in extracted:
+                p = os.path.join("update_temp", item)
                 if os.path.isdir(p):
                     src = p
                     break
@@ -67,7 +74,7 @@ def register(bot):
                 return await msg.edit("❌ Missing update folder.")
 
             for item in os.listdir():
-                if item in SAFE_ITEMS: 
+                if item in SAFE_ITEMS:
                     continue
                 if item in ALWAYS_REPLACE:
                     continue
@@ -86,7 +93,8 @@ def register(bot):
                 if item in SAFE_ITEMS:
                     continue
                 if item in ALWAYS_REPLACE and os.path.exists(d):
-                    if os.path.isfile(d): os.remove(d)
+                    if os.path.isfile(d):
+                        os.remove(d)
 
                 if os.path.isdir(s):
                     shutil.copytree(s, d, dirs_exist_ok=True)
