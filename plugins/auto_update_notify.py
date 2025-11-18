@@ -1,49 +1,79 @@
-import asyncio
+from telethon import events
 import requests
 import json
 import os
+import asyncio
 
-VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
-LAST_FILE = "last_checked_version.txt"
+REMOTE_VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
+LOCAL_VERSION_FILE = "version.json"
+LAST_CHECK_FILE = "last_checked_version.txt"
 
-async def notify_update(bot):
+
+def read_local_version():
+    if not os.path.exists(LOCAL_VERSION_FILE):
+        return "0.0.0"
+    try:
+        with open(LOCAL_VERSION_FILE, "r") as f:
+            return json.load(f).get("version", "0.0.0")
+    except:
+        return "0.0.0"
+
+
+def read_remote_version():
+    try:
+        r = requests.get(REMOTE_VERSION_URL, timeout=10).json()
+        return r.get("version", "0.0.0"), r.get("changelog", [])
+    except:
+        return None, None
+
+
+async def notify_update_loop(bot):
     while True:
         try:
-            r = requests.get(VERSION_URL, verify=False).json()
-            remote_version = r.get("version", "0.0.0")
-            changes = r.get("changelog", [])
+            local_version = read_local_version()
+            remote_version, changelog = read_remote_version()
 
-            if os.path.exists(LAST_FILE):
-                with open(LAST_FILE, "r") as f:
-                    last_version = f.read().strip()
+            if not remote_version:
+                await asyncio.sleep(120)
+                continue
+
+            # Load previous checked version
+            if os.path.exists(LAST_CHECK_FILE):
+                with open(LAST_CHECK_FILE, "r") as f:
+                    last_notified = f.read().strip()
             else:
-                last_version = "0.0.0"
+                last_notified = "0.0.0"
 
-            if remote_version != last_version:
+            # Send message only when remote != local AND remote != last_notified
+            if remote_version != local_version and remote_version != last_notified:
+
                 text = (
-                    f"⚠️ **New Update Available!**\n\n"
-                    f"🟡 **Last Checked:** {last_version}\n"
-                    f"🟢 **Latest Version:** {remote_version}\n\n"
-                    f"📌 **Changelog:**\n"
+                    "**⚠️ X-OPTIMUS NEW UPDATE IS THERE!**\n\n"
+                    f"**CURRENT VERSION:** `{local_version}`\n"
+                    f"**LATEST VERSION:** `{remote_version}`\n\n"
+                    "**CHANGE LOG:**\n"
                 )
 
-                if changes:
-                    for c in changes:
-                        text += f"- {c}\n"
+                if changelog:
+                    for item in changelog:
+                        text += f" - {item}\n"
                 else:
-                    text += "- No changelog provided\n"
+                    text += " - No changelog provided\n"
 
-                text += "\nUse **/update** to install."
+                text += "\nUse **/update** to install the update."
 
+                # SEND TO SAVED MESSAGES
                 await bot.send_message("me", text)
 
-                with open(LAST_FILE, "w") as f:
+                # Save last notified version
+                with open(LAST_CHECK_FILE, "w") as f:
                     f.write(remote_version)
 
         except Exception as e:
-            print(f"[auto_update_notify] Error: {e}")
+            print(f"[update_notify] Error: {e}")
 
-        await asyncio.sleep(120)
+        await asyncio.sleep(120)  # check every 2 minutes
+
 
 def register(bot):
-    bot.loop.create_task(notify_update(bot))
+    bot.loop.create_task(notify_update_loop(bot))
