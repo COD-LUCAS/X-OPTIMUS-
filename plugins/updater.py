@@ -147,5 +147,5 @@ def register(bot):
                 shutil.rmtree("update_temp")
 
 
-        await msg.edit("✅ Update installed successfully!\nPlease **restart your bot**.")
+        await msg.edit("✅ Update installed successfully!\nPlease **reboot your bot**.")
         
