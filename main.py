@@ -5,16 +5,16 @@ from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-paths = [
+CONFIGS = [
+    "container_data/config.env",
     "/home/container/container_data/config.env",
-    "/home/container_data/config.env",
-    "container_data/config.env"
+    "/home/container_data/config.env"
 ]
 
 loaded = False
-for p in paths:
-    if os.path.exists(p):
-        load_dotenv(p)
+for c in CONFIGS:
+    if os.path.exists(c):
+        load_dotenv(c)
         loaded = True
         break
 
@@ -22,13 +22,19 @@ if not loaded:
     print("❌ Missing config.env")
     exit()
 
-API_ID = os.getenv("API_ID")
-API_HASH = os.getenv("API_HASH")
-STRING_SESSION = os.getenv("STRING_SESSION")
+API_ID = os.getenv("API_ID", "")
+API_HASH = os.getenv("API_HASH", "")
+STRING = os.getenv("STRING_SESSION", "")
 OWNER = os.getenv("OWNER", "Unknown")
 
-if not API_ID or not API_HASH or not STRING_SESSION:
-    print("❌ Missing API credentials in config.env")
+if not API_ID or not API_HASH or not STRING:
+    print("❌ Missing required credentials")
+    exit()
+
+try:
+    API_ID = int(API_ID)
+except:
+    print("❌ API_ID must be integer")
     exit()
 
 try:
@@ -37,7 +43,7 @@ try:
 except:
     pass
 
-bot = TelegramClient(StringSession(STRING_SESSION), int(API_ID), API_HASH)
+bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
 plugins = {}
 
 def load_all_plugins():
@@ -47,39 +53,42 @@ def load_all_plugins():
             continue
         for f in os.listdir(folder):
             if f.endswith(".py") and f != "__init__.py":
-                module_path = f"{folder.replace('/', '.')}.{f[:-3]}"
-                module = importlib.import_module(module_path)
-                plugins[f[:-3]] = module
-                if hasattr(module, "register"):
-                    module.register(bot)
-                count += 1
+                name = f[:-3]
+                module_path = f"{folder.replace('/', '.')}.{name}"
+                try:
+                    module = importlib.import_module(module_path)
+                    plugins[name] = module
+                    if hasattr(module, "register"):
+                        module.register(bot)
+                    count += 1
+                except Exception as e:
+                    print(f"Plugin error in {name}: {e}")
     return count
 
 async def start_bot():
-    print("════════════════════════════════════")
-    print("🚀 X-OPTIMUS USERBOT STARTING…")
-    print("════════════════════════════════════")
+    print("══════════════════════")
+    print("🚀 X-OPTIMUS STARTING")
+    print("══════════════════════")
 
     total = load_all_plugins()
 
     print("🆔 API ID:", API_ID)
     print("👑 Owner:", OWNER)
-    print("📦 Plugins:", total)
-    print("🖥 Platform:", platform.system())
-    print("🔧 Telethon: 1.x")
-    print("════════════════════════════════════")
+    print("📦 Plugins Loaded:", total)
+    print("💻 Platform:", platform.system())
+    print("══════════════════════")
 
     await bot.start()
 
-    for m in plugins.values():
-        if hasattr(m, "on_startup"):
+    for module in plugins.values():
+        if hasattr(module, "on_startup"):
             try:
-                await m.on_startup(bot)
-            except:
-                pass
+                await module.on_startup(bot)
+            except Exception as e:
+                print(f"Startup hook error: {e}")
 
-    print("🟢 BOT ONLINE & RUNNING SUCCESSFULLY")
-    print("════════════════════════════════════")
+    print("🟢 BOT ONLINE & RUNNING")
+    print("══════════════════════")
 
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
