@@ -5,47 +5,44 @@ from telethon import events
 
 PING_IMAGE = "assets/ping.jpg"
 
+# Moving GIF / MP4 animation URL
+PING_GIF = "https://media.tenor.com/On7kvXhzml4AAAAd/loading-gif.gif"
 
 def register(bot):
-    
+
     @bot.on(events.NewMessage(pattern=r"^/ping$"))
     async def ping(event):
-        # Record start time
+
+        # Reaction before ping
+        try:
+            await event.react("⌛")
+        except:
+            pass
+
         start = time.time()
-        
-        # Send initial message
-        msg = await event.reply("🏓 **Pinging...**")
-        
-        # Calculate ping time
+
+        # Send a moving GIF first
+        gif_msg = await event.reply(file=PING_GIF)
+
         end = time.time()
-        ping_time = (end - start) * 1000  # Convert to milliseconds
-        
-        # Get current time
+        ping_time = (end - start) * 1000
+
         current_time = datetime.now().strftime("%H:%M:%S")
         current_date = datetime.now().strftime("%d/%m/%Y")
-        
-        # Create response text
+
         text = f"""
-🤖 **X-OPTIMUS IS ALIVE!**
+**🚀 X-OPTIMUS IS ALIVE!**
 
-⚡ **Ping:** `{ping_time:.2f}ms`
-🕐 **Time:** `{current_time}`
-📅 **Date:** `{current_date}`
-🟢 **Status:** Online
+🟣 **Ping:** `{ping_time:.2f}ms`
+🔵 **Time:** `{current_time}`
+🟢 **Date:** `{current_date}`
+🟡 **Status:** Online
 
-━━━━━━━━━━━━━━━━━━━━
-🔥 **Bot is running smoothly!**
+✨ *Bot is running smoothly!* ✨
 """
-        
-        # Edit message with ping result
+
+        # Replace GIF message with final ping result
         if os.path.exists(PING_IMAGE):
-            # Delete the "Pinging..." message
-            await msg.delete()
-            # Send new message with image
-            await event.reply(
-                file=PING_IMAGE,
-                message=text
-            )
+            await gif_msg.edit(file=PING_IMAGE, message=text)
         else:
-            # Just edit the text if no image
-            await msg.edit(text)
+            await gif_msg.edit(text)
