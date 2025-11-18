@@ -5,3 +5,4 @@ requests
 psutil
 aiohttp
 requests
+certifi==0.0.0
