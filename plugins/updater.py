@@ -12,7 +12,9 @@ ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 LOCAL_VERSION_FILE = "version.json"
 
 SAFE_FILES = [
-    "container_data/config.env",   # <-- ONLY THIS IS PROTECTED
+    "container_data/config.env",
+    "update_temp",  # Don't delete this during update
+    "update.zip",   # Don't delete this during update
 ]
 
 def read_local_version():
@@ -45,9 +47,9 @@ def register(bot):
         if local == remote:  
             await event.reply(f"✔️ Bot is up-to-date!\nVersion: {local}")  
         else:  
-            text = f"⚠️ Update Available!\n\nCurrent: {local}\nLatest: {remote}\n\n📝 Changes:\n"  
+            text = f"⚠️ New Update Available!\n\n💎 Current: {local}\n💎 Latest: {remote}\n\n🚀 Changelog:\n"  
             text += "\n".join([f"• {c}" for c in changes])  
-            text += "\n\nUse /update to install."  
+            text += "\n\nSend /update to install."  
             await event.reply(text)  
 
     @bot.on(events.NewMessage(pattern="/update"))  
@@ -55,43 +57,65 @@ def register(bot):
         msg = await event.reply("⬇️ Downloading update...")  
 
         try:  
+            # Download update
             r = requests.get(ZIP_URL)
             with open("update.zip", "wb") as f:  
                 f.write(r.content)  
 
             await msg.edit("📦 Extracting update...")  
 
+            # Extract to temp folder
             with zipfile.ZipFile("update.zip", "r") as z:  
                 z.extractall("update_temp")  
 
+            # Find extracted folder name
             folder = os.listdir("update_temp")[0]  
             src = os.path.join("update_temp", folder)  
 
+            await msg.edit("🔄 Installing update...")
+
+            # Delete old files (except protected ones)
             for item in os.listdir():  
-                if item in SAFE_FILES:
+                if item in SAFE_FILES or item.startswith('.'):
                     continue  
                 try:  
                     if os.path.isfile(item):  
                         os.remove(item)  
-                    else:  
+                    elif os.path.isdir(item):  
                         shutil.rmtree(item)  
-                except:  
-                    pass  
+                except Exception as e:
+                    print(f"Could not delete {item}: {e}")
 
+            # Copy new files
             for item in os.listdir(src):  
                 s = os.path.join(src, item)  
                 d = os.path.join(".", item)  
-                if os.path.isdir(s):  
-                    shutil.copytree(s, d, dirs_exist_ok=True)  
-                else:  
-                    shutil.copy2(s, d)  
+                
+                try:
+                    if os.path.isdir(s):  
+                        shutil.copytree(s, d, dirs_exist_ok=True)  
+                    else:  
+                        shutil.copy2(s, d)
+                except Exception as e:
+                    print(f"Could not copy {item}: {e}")
 
+            # Clean up temp files
             shutil.rmtree("update_temp")  
             os.remove("update.zip")  
 
             await msg.edit("✅ Update Installed!\n♻️ Restarting bot...")  
 
+            # Restart bot
             os.execv(sys.executable, ["python3"] + sys.argv)  
 
         except Exception as e:  
-            await msg.edit(f"❌ Update failed!\n`{e}`")
+            await msg.edit(f"❌ Update failed!\n[Errno 2] No such file or directory:\n`{e}`")
+            
+            # Clean up on error
+            try:
+                if os.path.exists("update_temp"):
+                    shutil.rmtree("update_temp")
+                if os.path.exists("update.zip"):
+                    os.remove("update.zip")
+            except:
+                pass
