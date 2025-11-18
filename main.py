@@ -5,30 +5,18 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 from dotenv import load_dotenv
 
-# ----------------------------------------------------------
-# CONFIG LOADING (Supports Auto-Update Safe Location)
-# ----------------------------------------------------------
-
-CONTAINER_DATA_CFG = "/home/container_data/config.env"     # Safe from auto-update
-CONTAINER_CFG = "/home/container/config.env"               # Fallback
+CONTAINER_DATA_CFG = "/home/container/container_data/config.env"
+CONTAINER_CFG = "/home/container/config.env"
+ROOT_CFG = "config.env"
 
 if os.path.isfile(CONTAINER_DATA_CFG):
-    print("[CONFIG] Loading from /home/container_data/config.env")
     load_dotenv(CONTAINER_DATA_CFG)
-
 elif os.path.isfile(CONTAINER_CFG):
-    print("[CONFIG] Loading from /home/container/config.env")
     load_dotenv(CONTAINER_CFG)
-
+elif os.path.isfile(ROOT_CFG):
+    load_dotenv(ROOT_CFG)
 else:
-    print("❌ NO config.env FOUND IN:")
-    print("   - /home/container_data/config.env")
-    print("   - /home/container/config.env")
-    exit(1)
-
-# ----------------------------------------------------------
-# READ CONFIG VALUES
-# ----------------------------------------------------------
+    load_dotenv()
 
 API_ID = int(os.getenv("API_ID", 0))
 API_HASH = os.getenv("API_HASH", "")
@@ -36,92 +24,65 @@ STRING_SESSION = os.getenv("STRING_SESSION", "")
 OWNER = os.getenv("OWNER", "Unknown")
 
 if API_ID == 0 or API_HASH == "" or STRING_SESSION == "":
-    print("❌ Missing API credentials in config.env")
+    print("Missing API credentials")
     exit(1)
 
-# ----------------------------------------------------------
-# START WEB SERVER
-# ----------------------------------------------------------
+IS_RENDER = os.environ.get("RENDER", "false").lower() == "true"
 
-try:
-    from webserver import start_webserver
-    start_webserver()
-    print("[WebServer] Started successfully.")
-except Exception as e:
-    print(f"[WebServer ERROR] {e}")
-
-# ----------------------------------------------------------
-# CREATE BOT CLIENT
-# ----------------------------------------------------------
+if IS_RENDER:
+    try:
+        from webserver import start_webserver
+        start_webserver()
+    except:
+        pass
 
 bot = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
 plugins = {}
-
-# ----------------------------------------------------------
-# LOGGING
-# ----------------------------------------------------------
-
 BORDER = "═" * 50
 
-def log(title, value):
-    print(f"{title:<15}: {value}")
-
-# ----------------------------------------------------------
-# LOAD PLUGINS
-# ----------------------------------------------------------
+def log(t, v):
+    print(f"{t:<15}: {v}")
 
 def load_plugins():
-    count = 0
-    for file in os.listdir("plugins"):
-        if file.endswith(".py") and file != "__init__.py":
-            name = file[:-3]
-            module = importlib.import_module(f"plugins.{name}")
-            plugins[name] = module
-            if hasattr(module, "register"):
-                module.register(bot)
-            count += 1
-    return count
-
-# ----------------------------------------------------------
-# RUN STARTUP EVENTS
-# ----------------------------------------------------------
+    c = 0
+    for f in os.listdir("plugins"):
+        if f.endswith(".py") and f != "__init__.py":
+            n = f[:-3]
+            m = importlib.import_module(f"plugins.{n}")
+            plugins[n] = m
+            if hasattr(m, "register"):
+                m.register(bot)
+            c += 1
+    return c
 
 async def run_startup_events():
-    for module in plugins.values():
-        if hasattr(module, "on_startup"):
+    for m in plugins.values():
+        if hasattr(m, "on_startup"):
             try:
-                await module.on_startup(bot)
-            except Exception as e:
-                print(f"[Startup Error] {e}")
-
-# ----------------------------------------------------------
-# MAIN STARTUP FUNCTION
-# ----------------------------------------------------------
+                await m.on_startup(bot)
+            except:
+                pass
 
 async def start_bot():
     print(BORDER)
-    print("🚀 X-OPTIMUS USERBOT STARTING…")
+    print("X-OPTIMUS USERBOT STARTING")
     print(BORDER)
 
-    plugin_count = load_plugins()
+    pc = load_plugins()
 
-    log("🆔 API ID", API_ID)
-    log("👑 Owner", OWNER)
-    log("📦 Plugins", plugin_count)
-    log("🖥 Platform", platform.system())
-    log("🔧 Telethon", "1.x")
+    log("API ID", API_ID)
+    log("Owner", OWNER)
+    log("Plugins", pc)
+    log("Platform", platform.system())
+    log("Telethon", "1.x")
 
     print(BORDER)
 
     await bot.start()
     await run_startup_events()
 
-    print("🟢 BOT ONLINE & RUNNING SUCCESSFULLY")
+    print("BOT ONLINE & RUNNING SUCCESSFULLY")
     print(BORDER)
-
-# ----------------------------------------------------------
-# RUN BOT
-# ----------------------------------------------------------
 
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
