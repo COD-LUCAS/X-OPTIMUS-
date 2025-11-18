@@ -1,16 +1,10 @@
 from telethon import events
 import os, json, requests, zipfile, shutil, sys, ssl
 
-try:
-    import certifi
-    cafile = certifi.where()
-    if not os.path.exists(cafile):
-        raise Exception()
-except:
-    cafile = "/etc/ssl/certs/ca-certificates.crt"
-
+cafile = "/etc/ssl/certs/ca-certificates.crt"
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=cafile)
-requests.get = lambda url, **kw: requests.request("GET", url, verify=cafile, **kw)
+_orig_request = requests.request
+requests.request = lambda method, url, **kw: _orig_request(method, url, verify=cafile, **kw)
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
