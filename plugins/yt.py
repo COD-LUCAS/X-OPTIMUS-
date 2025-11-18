@@ -3,6 +3,7 @@ import os
 import requests
 import shutil
 import aiohttp
+import asyncio
 
 API_URL = "https://api-aswin-sparky.koyeb.app/api/downloader/ytv"
 TEMP_FOLDER = "yt_temp"
@@ -22,29 +23,43 @@ def register(bot):
 
         msg = await event.reply("⏳ Fetching video...")
 
+        retry_limit = 3
+        data = None
+
+        for attempt in range(retry_limit):
+            try:
+                response = requests.get(
+                    f"{API_URL}?url={url}",
+                    verify=False,
+                    timeout=40
+                )
+                data = response.json()
+                break
+            except Exception:
+                if attempt == retry_limit - 1:
+                    return await msg.edit("❌ API Error, Try again later.")
+                await asyncio.sleep(2)
+
+        if not data or "data" not in data:
+            return await msg.edit("❌ Failed to fetch video.")
+
+        video = data["data"]
+        title = video.get("title", "YouTube Video")
+        download_url = video.get("url")
+
+        if not download_url:
+            return await msg.edit("❌ Download URL missing.")
+
+        safe_title = "".join(c for c in title if c.isalnum() or c in " _-")[:50]
+        file_path = f"{TEMP_FOLDER}/{safe_title}.mp4"
+
+        await msg.edit("⬇️ Downloading video...")
+
         try:
-            api = f"{API_URL}?url={url}"
-            res = requests.get(api, verify=False, timeout=10).json()
-
-            if not res.get("status") or "data" not in res:
-                return await msg.edit("❌ API error")
-
-            data = res["data"]
-            title = data.get("title", "video")
-            d_url = data.get("url")
-
-            if not d_url:
-                return await msg.edit("❌ Download URL missing")
-
-            safe_title = "".join(c for c in title if c.isalnum() or c in " _-")[:50]
-            file_path = f"{TEMP_FOLDER}/{safe_title}.mp4"
-
-            await msg.edit("⬇️ Downloading video...")
-
             async with aiohttp.ClientSession() as session:
-                async with session.get(d_url) as resp:
+                async with session.get(download_url, timeout=0) as resp:
                     if resp.status != 200:
-                        return await msg.edit("❌ Failed to download video")
+                        return await msg.edit("❌ Failed to download video.")
 
                     with open(file_path, "wb") as f:
                         while True:
@@ -52,29 +67,16 @@ def register(bot):
                             if not chunk:
                                 break
                             f.write(chunk)
-
-            if not os.path.exists(file_path) or os.path.getsize(file_path) < 1000:
-                return await msg.edit("❌ Corrupted/empty file")
-
-            await event.reply("🎥 Sending video...", file=file_path)
-
-            await msg.edit("✅ Downloaded")
-
         except Exception as e:
-            await msg.edit(f"❌ Error: `{str(e)}`")
+            return await msg.edit(f"❌ Download error: `{e}`")
 
-        finally:
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            except:
-                pass
+        if not os.path.exists(file_path):
+            return await msg.edit("❌ File not created.")
 
-            try:
-                for f in os.listdir(TEMP_FOLDER):
-                    p = f"{TEMP_FOLDER}/{f}"
-                    if os.path.isfile(p):
-                        if (os.path.getmtime(p) + 600) < __import__("time").time():
-                            os.remove(p)
-            except:
-                pass
+        await event.reply("🎥 Sending video...", file=file_path)
+        await msg.edit("✅ Done!")
+
+        try:
+            os.remove(file_path)
+        except:
+            pass
