@@ -5,6 +5,9 @@ import time
 
 PING_IMAGE = "assets/ping.jpg"
 
+# Popular ping/pong sticker file_id (you can replace this with any sticker you like)
+PING_STICKER_ID = "CAACAgIAAxkBAAEMYp5nO7RqLKZ8vPxU0z1hAAGxMGBBqwACShAAAtY3uEjqJqQ_UoH9fDYE"
+
 def register(bot):
     
     @bot.on(events.NewMessage(pattern=r"^/ping$"))
@@ -14,11 +17,19 @@ def register(bot):
         start = datetime.now()
         start_time = time.time()
         
-        # React with ping pong sticker
+        # Send sticker as reaction (reply to message with sticker)
         try:
-            await event.react("🏓")
+            await bot.send_file(
+                event.chat_id,
+                PING_STICKER_ID,
+                reply_to=event.id
+            )
         except:
-            pass
+            # If sticker fails, use emoji reaction
+            try:
+                await event.react("🏓")
+            except:
+                pass
         
         # Calculate latency
         end = datetime.now()
@@ -27,42 +38,26 @@ def register(bot):
         ping_time = (end - start).total_seconds() * 1000
         response_time = (end_time - start_time) * 1000
         
-        # Get uptime if available
-        uptime_str = "Running"
-        
         # Determine ping status
         if ping_time < 100:
             status = "Excellent"
-            bar = "████████████ 100%"
+            emoji = "⚡"
         elif ping_time < 200:
             status = "Good"
-            bar = "█████████░░░ 75%"
+            emoji = "✅"
         elif ping_time < 400:
             status = "Fair"
-            bar = "██████░░░░░░ 50%"
+            emoji = "⚠️"
         else:
             status = "Slow"
-            bar = "███░░░░░░░░░ 25%"
+            emoji = "🐌"
         
         # Create message
-        text = f"""**PONG! 🏓**
+        text = f"""**Pong! 🏓**
 
-╭─────────────────╮
-│  **Connection Status**  │
-╰─────────────────╯
-
-**Latency:** `{ping_time:.2f}ms`
-**Status:** `{status}`
-**Speed:** {bar}
-
-**Bot:** `Online`
-**Uptime:** `{uptime_str}`
-
-╭─────────────────╮
-│  **Performance**   │
-╰─────────────────╯
-
-Response: `{response_time:.3f}ms`
+**Latency:** `{ping_time:.2f} ms`
+**Status:** {status} {emoji}
+**Response:** `{response_time:.2f} ms`
 """
         
         # Send with image if available
