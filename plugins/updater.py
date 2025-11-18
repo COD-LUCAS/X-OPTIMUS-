@@ -13,8 +13,8 @@ LOCAL_VERSION_FILE = "version.json"
 
 SAFE_FILES = [
     "container_data/config.env",
-    "update_temp",  # Don't delete this during update
-    "update.zip",   # Don't delete this during update
+    "update_temp",
+    "update.zip",
 ]
 
 def read_local_version():
@@ -28,8 +28,8 @@ def read_local_version():
 
 def read_remote_version():
     try:
-        r = requests.get(VERSION_URL).json()
-        return r.get("version", "0.0.0"), r.get("changelog", [])
+        r = requests.get(VERSION_URL, verify=False)  # Disable SSL verification
+        return r.json().get("version", "0.0.0"), r.json().get("changelog", [])
     except:
         return None, None
 
@@ -57,8 +57,14 @@ def register(bot):
         msg = await event.reply("⬇️ Downloading update...")  
 
         try:  
-            # Download update
-            r = requests.get(ZIP_URL)
+            # Disable SSL warnings
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            
+            # Download update (with SSL verification disabled)
+            r = requests.get(ZIP_URL, verify=False)
+            r.raise_for_status()
+            
             with open("update.zip", "wb") as f:  
                 f.write(r.content)  
 
@@ -109,7 +115,7 @@ def register(bot):
             os.execv(sys.executable, ["python3"] + sys.argv)  
 
         except Exception as e:  
-            await msg.edit(f"❌ Update failed!\n[Errno 2] No such file or directory:\n`{e}`")
+            await msg.edit(f"❌ Update failed!\n`{str(e)}`")
             
             # Clean up on error
             try:
