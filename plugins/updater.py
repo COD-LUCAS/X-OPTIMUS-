@@ -1,7 +1,12 @@
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
+import requests
+requests.packages.urllib3.disable_warnings()
+
 from telethon import events
 import os
 import json
-import requests
 import zipfile
 import shutil
 import sys
@@ -34,10 +39,10 @@ def safe(p):
             return True
     return False
 
-def find_real_folder(root):
-    for dirpath, dirnames, filenames in os.walk(root):
-        if "main.py" in filenames:        # core file → correct folder
-            return dirpath
+def find_folder(root):
+    for d, dirs, files in os.walk(root):
+        if "main.py" in files:
+            return d
     return None
 
 def register(bot):
@@ -66,9 +71,9 @@ def register(bot):
             with zipfile.ZipFile("update.zip", "r") as z:
                 z.extractall("update_temp")
 
-            folder = find_real_folder("update_temp")
+            folder = find_folder("update_temp")
             if not folder:
-                await m.edit("Update failed: main.py not found in ZIP")
+                await m.edit("Update failed: main.py not found")
                 return
 
             for item in os.listdir():
