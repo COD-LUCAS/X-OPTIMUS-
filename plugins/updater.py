@@ -14,7 +14,7 @@ SAFE_PATHS = ["container_data/config.env"]
 
 def local_version():
     if not os.path.exists(LOCAL_VERSION_FILE):
-        open(LOCAL_VERSION_FILE, "w").write('{"version":"0.0.0","changelog":[]}')
+        open(LOCAL_VERSION_FILE, "w").write('{"version":"0.0.0"}')
         return "0.0.0"
     try:
         return json.load(open(LOCAL_VERSION_FILE)).get("version", "0.0.0")
@@ -34,6 +34,12 @@ def safe(p):
             return True
     return False
 
+def find_real_folder(root):
+    for dirpath, dirnames, filenames in os.walk(root):
+        if "main.py" in filenames:        # core file → correct folder
+            return dirpath
+    return None
+
 def register(bot):
 
     @bot.on(events.NewMessage(pattern="/checkupdate"))
@@ -43,10 +49,10 @@ def register(bot):
         if lv == rv:
             await event.reply(f"✔ Bot is up-to-date\nVersion: {lv}")
         else:
-            msg = f"⚠ Update Available\nCurrent: {lv}\nLatest: {rv}\n\nChanges:\n"
-            msg += "\n".join([f"- {c}" for c in changes])
-            msg += "\n\nUse /update to install."
-            await event.reply(msg)
+            txt = f"⚠ Update Available\nCurrent: {lv}\nLatest: {rv}\n\n"
+            txt += "\n".join([f"- {c}" for c in changes])
+            txt += "\n\nUse /update to install."
+            await event.reply(txt)
 
     @bot.on(events.NewMessage(pattern="/update"))
     async def update(event):
@@ -60,14 +66,10 @@ def register(bot):
             with zipfile.ZipFile("update.zip", "r") as z:
                 z.extractall("update_temp")
 
-            folders = [f for f in os.listdir("update_temp")
-                       if os.path.isdir(os.path.join("update_temp", f))]
-
-            if not folders:
-                await m.edit("Update failed: No folder found")
+            folder = find_real_folder("update_temp")
+            if not folder:
+                await m.edit("Update failed: main.py not found in ZIP")
                 return
-
-            src = os.path.join("update_temp", folders[0])
 
             for item in os.listdir():
                 if safe(item):
@@ -80,10 +82,10 @@ def register(bot):
                 except:
                     pass
 
-            for item in os.listdir(src):
+            for item in os.listdir(folder):
                 if safe(item):
                     continue
-                s = os.path.join(src, item)
+                s = os.path.join(folder, item)
                 d = os.path.join(".", item)
                 if os.path.isdir(s):
                     shutil.copytree(s, d, dirs_exist_ok=True)
