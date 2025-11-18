@@ -1,10 +1,17 @@
 from telethon import events
 import os
 import json
-import requests
 import zipfile
 import shutil
 import sys
+
+# Fix SSL certificate issues BEFORE importing requests
+os.environ['CURL_CA_BUNDLE'] = ''
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+
+import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
@@ -30,12 +37,11 @@ def read_local_version():
 
 def read_remote_version():
     try:
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        r = requests.get(VERSION_URL, verify=False)
+        r = requests.get(VERSION_URL, verify=False, timeout=10)
         data = r.json()
         return data.get("version", "0.0.0"), data.get("changelog", [])
-    except:
+    except Exception as e:
+        print(f"Version check error: {e}")
         return None, None
 
 def register(bot):
@@ -46,7 +52,7 @@ def register(bot):
         remote, changes = read_remote_version()  
 
         if not remote:  
-            await event.reply("❌ Could not check update!\nVersion file missing.")  
+            await event.reply("❌ Could not check update!\nVersion file missing or network error.")  
             return  
 
         if local == remote:  
@@ -62,12 +68,8 @@ def register(bot):
         msg = await event.reply("⬇️ Downloading update...")  
 
         try:  
-            # Disable SSL warnings
-            import urllib3
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            
-            # Download update
-            r = requests.get(ZIP_URL, verify=False)
+            # Download update with SSL disabled
+            r = requests.get(ZIP_URL, verify=False, timeout=30)
             r.raise_for_status()
             
             with open("update.zip", "wb") as f:  
@@ -80,7 +82,11 @@ def register(bot):
                 z.extractall("update_temp")  
 
             # Find extracted folder name
-            folder = os.listdir("update_temp")[0]  
+            temp_contents = os.listdir("update_temp")
+            if not temp_contents:
+                raise Exception("Update archive is empty!")
+                
+            folder = temp_contents[0]  
             src = os.path.join("update_temp", folder)
             
             # Verify source exists
@@ -96,6 +102,7 @@ def register(bot):
                 
                 # Skip protected items
                 if item in SAFE_FILES:
+                    print(f"Skipping protected: {item}")
                     continue
                 
                 try:
@@ -111,19 +118,22 @@ def register(bot):
                         shutil.copytree(s, d)  
                     else:  
                         shutil.copy2(s, d)
+                    print(f"Updated: {item}")
                 except Exception as e:
                     print(f"Could not update {item}: {e}")
 
             # Clean up temp files
             try:
                 shutil.rmtree("update_temp")
-            except:
-                pass
+                print("Cleaned up update_temp")
+            except Exception as e:
+                print(f"Could not remove update_temp: {e}")
             
             try:
                 os.remove("update.zip")
-            except:
-                pass
+                print("Cleaned up update.zip")
+            except Exception as e:
+                print(f"Could not remove update.zip: {e}")
 
             await msg.edit("✅ Update Installed!\n♻️ Restarting bot...")  
 
@@ -131,7 +141,8 @@ def register(bot):
             os.execv(sys.executable, ["python3"] + sys.argv)  
 
         except Exception as e:  
-            await msg.edit(f"❌ Update failed!\n`{str(e)}`")
+            error_msg = str(e)
+            await msg.edit(f"❌ Update failed!\n`{error_msg[:200]}`")
             
             # Clean up on error
             try:
