@@ -6,8 +6,8 @@
 
 A powerful Telegram bot built with Python.
 
-⚠️ IMPORTANT UPDATE SAFETY WARNING
-<div align="center">
+​⚠️ IMPORTANT UPDATE SAFETY WARNING
+​<div align="center">
 <div style="
 background-color: #ffcccc;
 border: 2px solid #cc0000;
