@@ -1,10 +1,5 @@
 from telethon import events
-import os
-import json
-import requests
-import zipfile
-import shutil
-import sys
+import os, json, requests, zipfile, shutil, sys
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
@@ -42,8 +37,7 @@ def register(bot):
         else:
             t = f"⚠️ X-OPTIMUS NEW UPDATE IS THERE\n\n"
             t += f"CURRENT VERSION: {lv}\n"
-            t += f"LATEST VERSION: {rv}\n\n"
-            t += "CHANGE LOG:\n"
+            t += f"LATEST VERSION: {rv}\n\nCHANGE LOG:\n"
             for i in log:
                 t += f" - {i}\n"
             t += "\nFOR UPDATE: /update"
@@ -61,27 +55,27 @@ def register(bot):
             with zipfile.ZipFile("update.zip") as z:
                 z.extractall("update_temp")
 
-            dirs = os.listdir("update_temp")
+            dirs = [d for d in os.listdir("update_temp") if os.path.isdir(os.path.join("update_temp", d))]
             if not dirs:
-                await msg.edit("❌ Update failed: no extracted folder.")
+                await msg.edit("❌ Update failed: folder missing.")
                 return
 
             src = os.path.join("update_temp", dirs[0])
 
-            for item in os.listdir():
-                if item in SAFE:
+            for x in os.listdir():
+                if x in SAFE:
                     continue
                 try:
-                    if os.path.isfile(item):
-                        os.remove(item)
+                    if os.path.isfile(x):
+                        os.remove(x)
                     else:
-                        shutil.rmtree(item)
+                        shutil.rmtree(x)
                 except:
                     pass
 
-            for item in os.listdir(src):
-                s = os.path.join(src, item)
-                d = os.path.join(".", item)
+            for i in os.listdir(src):
+                s = os.path.join(src, i)
+                d = os.path.join(".", i)
                 if os.path.isdir(s):
                     shutil.copytree(s, d, dirs_exist_ok=True)
                 else:
