@@ -11,16 +11,13 @@ ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
 LOCAL_VERSION_FILE = "version.json"
 
-SAFE_PATHS = [
-    "container_data/config.env"
-]
+SAFE_PATHS = ["container_data/config.env"]
 
 def read_local_version():
     if not os.path.exists(LOCAL_VERSION_FILE):
         return "0.0.0"
     try:
-        with open(LOCAL_VERSION_FILE, "r") as f:
-            return json.load(f).get("version", "0.0.0")
+        return json.load(open(LOCAL_VERSION_FILE)).get("version", "0.0.0")
     except:
         return "0.0.0"
 
@@ -31,9 +28,9 @@ def read_remote_version():
     except:
         return None, None
 
-def is_safe(path):
-    for safe in SAFE_PATHS:
-        if path == safe or path.startswith(safe):
+def is_safe(p):
+    for s in SAFE_PATHS:
+        if p == s or p.startswith(s):
             return True
     return False
 
@@ -43,11 +40,9 @@ def register(bot):
     async def check(event):
         local = read_local_version()
         remote, changes = read_remote_version()
-
         if not remote:
             await event.reply("Could not check update.")
             return
-
         if local == remote:
             await event.reply(f"Up-to-date\nVersion: {local}")
         else:
@@ -62,16 +57,23 @@ def register(bot):
 
         try:
             r = requests.get(ZIP_URL)
-            with open("update.zip", "wb") as f:
-                f.write(r.content)
+            open("update.zip", "wb").write(r.content)
 
             await msg.edit("Extracting update...")
 
             with zipfile.ZipFile("update.zip", "r") as z:
                 z.extractall("update_temp")
 
-            folder = os.listdir("update_temp")[0]
-            src = os.path.join("update_temp", folder)
+            folders = [
+                f for f in os.listdir("update_temp")
+                if os.path.isdir(os.path.join("update_temp", f))
+            ]
+
+            if not folders:
+                await msg.edit("Update failed: No folder found.")
+                return
+
+            src = os.path.join("update_temp", folders[0])
 
             for item in os.listdir():
                 if is_safe(item):
@@ -85,12 +87,10 @@ def register(bot):
                     pass
 
             for item in os.listdir(src):
-                s = os.path.join(src, item)
-                d = os.path.join(".", item)
-
                 if is_safe(item):
                     continue
-
+                s = os.path.join(src, item)
+                d = os.path.join(".", item)
                 if os.path.isdir(s):
                     shutil.copytree(s, d, dirs_exist_ok=True)
                 else:
@@ -100,7 +100,6 @@ def register(bot):
             os.remove("update.zip")
 
             await msg.edit("Update Installed\nRestarting...")
-
             os.execv(sys.executable, ["python3"] + sys.argv)
 
         except Exception as e:
