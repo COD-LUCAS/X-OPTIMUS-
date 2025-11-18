@@ -1,8 +1,4 @@
-telethon
-python-dotenv
-flask
-requests
-psutil
-aiohttp
-requests
-certifi==0.0.0
+telethon==1.34.0
+aiohttp==3.9.5
+requests==2.31.0
+flask==3.0.0
