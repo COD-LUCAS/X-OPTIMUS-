@@ -11,14 +11,14 @@ paths = [
     "container_data/config.env"
 ]
 
-config_loaded = False
+loaded = False
 for p in paths:
     if os.path.exists(p):
         load_dotenv(p)
-        config_loaded = True
+        loaded = True
         break
 
-if not config_loaded:
+if not loaded:
     print("❌ Missing config.env")
     exit()
 
@@ -45,42 +45,41 @@ def load_all_plugins():
     for folder in ["plugins", "plugins/user_plugins"]:
         if not os.path.exists(folder):
             continue
-        for file in os.listdir(folder):
-            if file.endswith(".py") and file != "__init__.py":
-                name = file[:-3]
-                module_path = f"{folder.replace('/', '.')}.{name}"
+        for f in os.listdir(folder):
+            if f.endswith(".py") and f != "__init__.py":
+                module_path = f"{folder.replace('/', '.')}.{f[:-3]}"
                 module = importlib.import_module(module_path)
-                plugins[name] = module
+                plugins[f[:-3]] = module
                 if hasattr(module, "register"):
                     module.register(bot)
                 count += 1
     return count
 
 async def start_bot():
-    print("══════════════════════════════════════")
+    print("════════════════════════════════════")
     print("🚀 X-OPTIMUS USERBOT STARTING…")
-    print("══════════════════════════════════════")
+    print("════════════════════════════════════")
 
-    count = load_all_plugins()
+    total = load_all_plugins()
 
     print("🆔 API ID:", API_ID)
     print("👑 Owner:", OWNER)
-    print("📦 Plugins:", count)
+    print("📦 Plugins:", total)
     print("🖥 Platform:", platform.system())
-    print("🔧 Telethon:", "1.x")
-    print("══════════════════════════════════════")
+    print("🔧 Telethon: 1.x")
+    print("════════════════════════════════════")
 
     await bot.start()
 
-    for module in plugins.values():
-        if hasattr(module, "on_startup"):
+    for m in plugins.values():
+        if hasattr(m, "on_startup"):
             try:
-                await module.on_startup(bot)
+                await m.on_startup(bot)
             except:
                 pass
 
     print("🟢 BOT ONLINE & RUNNING SUCCESSFULLY")
-    print("══════════════════════════════════════")
+    print("════════════════════════════════════")
 
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
