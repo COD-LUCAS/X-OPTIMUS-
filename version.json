@@ -1,6 +1,13 @@
 {
-  "version": "1.0.3",
+  "version": "1.1.0",
   "changelog": [
-    "Added ytv"
+    "Added support for user plugins in plugins/user_plugins/",
+    "Updater now protects user installed plugins",
+    "Added clean /install command for user plugins",
+    "Added /remove command for user plugins",
+    "Improved plugin loader in main.py",
+    "Fixed update notifier format",
+    "Fixed /yt timeout retry system",
+    "Full system cleanup and stability improvements"
   ]
 }
