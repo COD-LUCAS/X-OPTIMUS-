@@ -3,12 +3,8 @@ import os, json, requests, zipfile, shutil, sys, ssl
 
 cafile = "/etc/ssl/certs/ca-certificates.crt"
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=cafile)
-
-_orig_request = requests.request
-def fixed(method, url, **kw):
-    kw["verify"] = cafile
-    return _orig_request(method, url, **kw)
-requests.request = fixed
+_old = requests.request
+requests.request = lambda method, url, **kw: _old(method, url, verify=cafile, **kw)
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
@@ -26,6 +22,28 @@ ALWAYS_REPLACE = [
 
 def register(bot):
 
+    @bot.on(events.NewMessage(pattern=r"^/checkupdate$"))
+    async def check(event):
+        try:
+            r = requests.get(VERSION_URL).json()
+            remote = r.get("version", "0.0.0")
+            log = r.get("changelog", [])
+            if os.path.exists("version.json"):
+                local = json.load(open("version.json")).get("version", "0.0.0")
+            else:
+                local = "0.0.0"
+
+            if local == remote:
+                return await event.reply(f"✔️ Up-to-date\nVersion: {local}")
+
+            msg = f"⚠️ UPDATE AVAILABLE\n\nCURRENT VERSION: {local}\nLATEST VERSION: {remote}\n\nCHANGE LOG:\n"
+            for c in log: msg += f"- {c}\n"
+            msg += "\nUse /update to install."
+            await event.reply(msg)
+
+        except Exception as e:
+            await event.reply(f"❌ Failed:\n`{e}`")
+
     @bot.on(events.NewMessage(pattern=r"^/update$"))
     async def update(event):
         msg = await event.reply("⬇️ Downloading update...")
@@ -34,24 +52,22 @@ def register(bot):
             r = requests.get(ZIP_URL)
             open("update.zip", "wb").write(r.content)
 
-            await msg.edit("📦 Extracting update...")
-
             with zipfile.ZipFile("update.zip", "r") as z:
                 z.extractall("update_temp")
 
             extracted = os.listdir("update_temp")
             src = None
-            for item in extracted:
-                p = os.path.join("update_temp", item)
+            for i in extracted:
+                p = os.path.join("update_temp", i)
                 if os.path.isdir(p):
                     src = p
                     break
 
             if not src:
-                return await msg.edit("❌ Update folder missing.")
+                return await msg.edit("❌ Missing update folder.")
 
             for item in os.listdir():
-                if item in SAFE_ITEMS:
+                if item in SAFE_ITEMS: 
                     continue
                 if item in ALWAYS_REPLACE:
                     continue
@@ -69,10 +85,8 @@ def register(bot):
 
                 if item in SAFE_ITEMS:
                     continue
-
                 if item in ALWAYS_REPLACE and os.path.exists(d):
-                    if os.path.isfile(d):
-                        os.remove(d)
+                    if os.path.isfile(d): os.remove(d)
 
                 if os.path.isdir(s):
                     shutil.copytree(s, d, dirs_exist_ok=True)
