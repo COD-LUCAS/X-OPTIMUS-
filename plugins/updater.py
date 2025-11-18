@@ -3,8 +3,12 @@ import os, json, requests, zipfile, shutil, sys, ssl
 
 cafile = "/etc/ssl/certs/ca-certificates.crt"
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=cafile)
+
 _orig_request = requests.request
-requests.request = lambda method, url, **kw: _orig_request(method, url, verify=cafile, **kw)
+def fixed(method, url, **kw):
+    kw["verify"] = cafile
+    return _orig_request(method, url, **kw)
+requests.request = fixed
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
@@ -36,9 +40,6 @@ def register(bot):
                 z.extractall("update_temp")
 
             extracted = os.listdir("update_temp")
-            if not extracted:
-                return await msg.edit("❌ Extracted folder empty.")
-
             src = None
             for item in extracted:
                 p = os.path.join("update_temp", item)
@@ -69,10 +70,9 @@ def register(bot):
                 if item in SAFE_ITEMS:
                     continue
 
-                if item in ALWAYS_REPLACE:
-                    if os.path.exists(d):
-                        if os.path.isfile(d):
-                            os.remove(d)
+                if item in ALWAYS_REPLACE and os.path.exists(d):
+                    if os.path.isfile(d):
+                        os.remove(d)
 
                 if os.path.isdir(s):
                     shutil.copytree(s, d, dirs_exist_ok=True)
