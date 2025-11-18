@@ -7,7 +7,6 @@ ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 SAFE = [
     "container_data",
     "plugins/user_plugins",
-    "version.json"
 ]
 
 def local_ver():
@@ -60,21 +59,36 @@ def register(bot):
             await msg.edit(f"❌ Extract failed:\n{e}")
             return
 
-        dirs=[]
-        for d in os.listdir("update_temp"):
-            p=os.path.join("update_temp",d)
-            if os.path.isdir(p):
-                dirs.append(p)
+        # Find the extracted directory
+        src = None
+        for root, dirs, files in os.walk("update_temp"):
+            # Look for a directory that contains expected bot files
+            if any(f in files for f in ["main.py", "bot.py", "version.json"]) or \
+               any(d in dirs for d in ["plugins", "modules"]):
+                src = root
+                break
+        
+        # If not found by content, just use first subdirectory
+        if not src:
+            items = os.listdir("update_temp")
+            for item in items:
+                path = os.path.join("update_temp", item)
+                if os.path.isdir(path):
+                    src = path
+                    break
 
-        if not dirs:
-            await msg.edit("❌ Update failed: extracted folder missing.")
+        if not src or not os.path.exists(src):
+            await msg.edit("❌ Update failed: cannot find extracted files.")
+            if os.path.exists("update_temp"):
+                shutil.rmtree("update_temp")
+            if os.path.exists("update.zip"):
+                os.remove("update.zip")
             return
 
-        src=dirs[0]
-
         try:
+            # Remove old files/folders (except safe ones)
             for x in os.listdir():
-                if x in SAFE:
+                if x in SAFE or x in ["update_temp", "update.zip"]:
                     continue
                 try:
                     if os.path.isfile(x):
@@ -84,19 +98,33 @@ def register(bot):
                 except:
                     pass
 
+            # Copy new files
             for x in os.listdir(src):
-                s=os.path.join(src,x)
-                d=os.path.join(".",x)
-                if os.path.isdir(s):
-                    shutil.copytree(s,d,dirs_exist_ok=True)
-                else:
-                    shutil.copy2(s,d)
+                if x in SAFE:
+                    continue
+                s = os.path.join(src, x)
+                d = os.path.join(".", x)
+                try:
+                    if os.path.isdir(s):
+                        if os.path.exists(d):
+                            shutil.rmtree(d)
+                        shutil.copytree(s, d)
+                    else:
+                        shutil.copy2(s, d)
+                except Exception as e:
+                    print(f"Error copying {x}: {e}")
 
+            # Cleanup
             shutil.rmtree("update_temp")
             os.remove("update.zip")
 
             await msg.edit("✅ Update Complete\n♻ Restarting...")
-            os.execv(sys.executable,["python3"]+sys.argv)
+            os.execv(sys.executable, ["python3"] + sys.argv)
 
         except Exception as e:
             await msg.edit(f"❌ Update failed during replace:\n{e}")
+            # Cleanup on error
+            if os.path.exists("update_temp"):
+                shutil.rmtree("update_temp")
+            if os.path.exists("update.zip"):
+                os.remove("update.zip")
