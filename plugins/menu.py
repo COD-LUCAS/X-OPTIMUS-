@@ -59,7 +59,7 @@ __________________________________
 {core}{plug}
 __________________________________
 
-Use /help <command> for details"""
+contact @codlucas for any help"""
 
         try:
             await event.react("📋")
