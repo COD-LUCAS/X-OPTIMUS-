@@ -4,25 +4,17 @@ from datetime import datetime
 from telethon import events
 
 PING_IMAGE = "assets/ping.jpg"
-
-# Moving GIF / MP4 animation URL
-PING_GIF = "https://media.tenor.com/On7kvXhzml4AAAAd/loading-gif.gif"
+PING_GIF = "https://i.gifer.com/YCZH.gif"  # Animated hourglass GIF
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/ping$"))
     async def ping(event):
 
-        # Reaction before ping
-        try:
-            await event.react("⌛")
-        except:
-            pass
-
         start = time.time()
 
-        # Send a moving GIF first
-        gif_msg = await event.reply(file=PING_GIF)
+        # Send animated hourglass GIF
+        loading = await event.reply(file=PING_GIF)
 
         end = time.time()
         ping_time = (end - start) * 1000
@@ -41,8 +33,8 @@ def register(bot):
 ✨ *Bot is running smoothly!* ✨
 """
 
-        # Replace GIF message with final ping result
+        # Replace GIF with final ping message + image if available
         if os.path.exists(PING_IMAGE):
-            await gif_msg.edit(file=PING_IMAGE, message=text)
+            await loading.edit(file=PING_IMAGE, message=text)
         else:
-            await gif_msg.edit(text)
+            await loading.edit(text)
