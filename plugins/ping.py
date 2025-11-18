@@ -9,28 +9,26 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/ping$"))
     async def ping(event):
-
-        start = time.time()
-        reply = await event.reply("❤️ Pinging...")
-        end = time.time()
+        start = time.perf_counter()
+        msg = await event.reply("⌛ Pinging...")
+        end = time.perf_counter()
 
         ping_ms = (end - start) * 1000
-
-        time_now = datetime.now().strftime("%H:%M:%S")
-        date_now = datetime.now().strftime("%d/%m/%Y")
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        current_date = now.strftime("%d/%m/%Y")
 
         text = f"""
 **🚀 X-OPTIMUS IS ALIVE!**
 
-🟣 **Ping:** `{ping_ms:.2f}ms`
-🔵 **Time:** `{time_now}`
-🟢 **Date:** `{date_now}`
+🟣 **Ping:** `{ping_ms:.2f} ms`
+🔵 **Time:** `{current_time}`
+🟢 **Date:** `{current_date}`
 🟡 **Status:** Online
-
-✨ *Bot is running smoothly!* ✨
 """
 
         if os.path.exists(PING_IMAGE):
-            await reply.edit(file=PING_IMAGE, message=text)
+            await msg.delete()
+            await event.reply(file=PING_IMAGE, message=text)
         else:
-            await reply.edit(text)
+            await msg.edit(text)
