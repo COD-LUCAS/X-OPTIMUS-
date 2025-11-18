@@ -1,14 +1,24 @@
 from telethon import events
-import os, json, requests, zipfile, shutil, sys
+import os, json, requests, zipfile, shutil, sys, ssl
+
+try:
+    import certifi
+    cafile = certifi.where()
+    if not os.path.exists(cafile):
+        raise Exception()
+except:
+    cafile = "/etc/ssl/certs/ca-certificates.crt"
+
+ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=cafile)
+requests.get = lambda url, **kw: requests.request("GET", url, verify=cafile, **kw)
 
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
-LOCAL_VERSION_FILE = "version.json"
-
 SAFE_ITEMS = [
-    "container_data",                # protect config.env
-    "plugins/user_plugins",          # protect user plugins
+    "container_data",
+    "container_data/config.env",
+    "plugins/user_plugins"
 ]
 
 ALWAYS_REPLACE = [
@@ -16,12 +26,10 @@ ALWAYS_REPLACE = [
     "requirements.txt"
 ]
 
-
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/update$"))
     async def update(event):
-
         msg = await event.reply("⬇️ Downloading update...")
 
         try:
@@ -33,22 +41,20 @@ def register(bot):
             with zipfile.ZipFile("update.zip", "r") as z:
                 z.extractall("update_temp")
 
-            # Detect GitHub folder dynamically
-            extracted_items = os.listdir("update_temp")
-            if not extracted_items:
+            extracted = os.listdir("update_temp")
+            if not extracted:
                 return await msg.edit("❌ Extracted folder empty.")
 
             src = None
-            for item in extracted_items:
-                path = os.path.join("update_temp", item)
-                if os.path.isdir(path):
-                    src = path
+            for item in extracted:
+                p = os.path.join("update_temp", item)
+                if os.path.isdir(p):
+                    src = p
                     break
 
             if not src:
-                return await msg.edit("❌ Could not detect update folder.")
+                return await msg.edit("❌ Update folder missing.")
 
-            # DELETE all except SAFE folders
             for item in os.listdir():
                 if item in SAFE_ITEMS:
                     continue
@@ -62,27 +68,23 @@ def register(bot):
                 except:
                     pass
 
-            # COPY EVERYTHING FROM UPDATE
             for item in os.listdir(src):
                 s = os.path.join(src, item)
                 d = os.path.join(".", item)
 
-                # Always replace version.json & requirements.txt
-                if item in ALWAYS_REPLACE:
-                    if os.path.isfile(d):
-                        os.remove(d)
-
-                # Skip protected directories
                 if item in SAFE_ITEMS:
                     continue
 
-                # Copy updated files
+                if item in ALWAYS_REPLACE:
+                    if os.path.exists(d):
+                        if os.path.isfile(d):
+                            os.remove(d)
+
                 if os.path.isdir(s):
                     shutil.copytree(s, d, dirs_exist_ok=True)
                 else:
                     shutil.copy2(s, d)
 
-            # Cleanup
             shutil.rmtree("update_temp")
             os.remove("update.zip")
 
