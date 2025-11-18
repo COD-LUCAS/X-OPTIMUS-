@@ -4,84 +4,96 @@ from telethon import events
 VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
-SAFE = ["container_data", "plugins/user_plugins", "version.json"]
+SAFE = [
+    "container_data",
+    "plugins/user_plugins",
+    "version.json",
+    "requirements.txt"
+]
 
 
-def get_local_version():
+def local_version():
     try:
         return json.load(open("version.json")).get("version", "0.0.0")
     except:
         return "0.0.0"
 
 
-def get_remote():
+def remote_version():
     try:
         r = requests.get(VERSION_URL, timeout=10, verify=False).json()
         return r.get("version"), r.get("changelog", [])
     except:
-        return None, None
+        return None, []
 
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/checkupdate$"))
     async def checkupdate(event):
-        lv = get_local_version()
-        rv, log = get_remote()
+        lv = local_version()
+        rv, log = remote_version()
 
         if rv is None:
-            await event.reply("❌ Cannot fetch update info.")
+            await event.reply("❌ Could not fetch update info.")
             return
 
         if lv == rv:
-            await event.reply(f"✅ Bot is already up-to-date.\nVersion: {lv}")
+            await event.reply(f"✅ Bot is up-to-date.\nVersion: {lv}")
             return
 
-        txt = f"⚠️ **X-OPTIMUS NEW UPDATE IS THERE**\n\n"
-        txt += f"🟣 CURRENT VERSION: `{lv}`\n"
-        txt += f"🟢 LATEST VERSION: `{rv}`\n\n"
-        txt += "📄 **CHANGE LOG:**\n"
+        text = f"⚠️ **X-OPTIMUS NEW UPDATE AVAILABLE**\n\n"
+        text += f"🟣 CURRENT VERSION: `{lv}`\n"
+        text += f"🟢 LATEST VERSION: `{rv}`\n\n"
+        text += "📄 **CHANGE LOG:**\n"
         for i in log:
-            txt += f"• {i}\n"
-        txt += "\n➡️ Update using: `/update`"
+            text += f"• {i}\n"
+        text += "\n➡️ Use `/update` to install."
 
-        await event.reply(txt)
+        await event.reply(text)
 
     @bot.on(events.NewMessage(pattern=r"^/update$"))
     async def update(event):
         msg = await event.reply("⬇️ Downloading update...")
 
+        # Download ZIP
         try:
-            data = requests.get(ZIP_URL, timeout=20, verify=False).content
-            open("update.zip", "wb").write(data)
+            zdata = requests.get(ZIP_URL, timeout=20, verify=False).content
+            open("update.zip", "wb").write(zdata)
         except Exception as e:
-            await msg.edit(f"❌ Update failed:\n`{e}`")
+            await msg.edit(f"❌ Download failed:\n`{e}`")
             return
 
         await msg.edit("📦 Extracting update...")
 
+        # Extract ZIP
         try:
             with zipfile.ZipFile("update.zip") as z:
                 z.extractall("update_temp")
         except Exception as e:
-            await msg.edit(f"❌ Extraction failed:\n`{e}`")
+            await msg.edit(f"❌ Extract failed:\n`{e}`")
             return
 
-        # FIND REAL FOLDER (GitHub renames it automatically)
+        # AUTO-DETECT extracted folder — THIS FIXES YOUR ERROR
         try:
-            dirs = [d for d in os.listdir("update_temp") if os.path.isdir(os.path.join("update_temp", d))]
-            if not dirs:
-                await msg.edit("❌ Update failed: extracted folder missing.")
+            dirlist = [
+                d for d in os.listdir("update_temp")
+                if os.path.isdir(os.path.join("update_temp", d))
+            ]
+
+            if not dirlist:
+                await msg.edit("❌ Update failed: No extracted folder found.")
                 return
 
-            src = os.path.join("update_temp", dirs[0])
+            extracted = os.path.join("update_temp", dirlist[0])
 
         except Exception as e:
-            await msg.edit(f"❌ Update failed:\n`{e}`")
+            await msg.edit(f"❌ Folder detection failed:\n`{e}`")
             return
 
         await msg.edit("♻️ Replacing files...")
 
+        # Replace files safely
         try:
             for item in os.listdir():
                 if item in SAFE:
@@ -94,18 +106,20 @@ def register(bot):
                 else:
                     shutil.rmtree(item)
 
-            for item in os.listdir(src):
-                s = os.path.join(src, item)
-                d = os.path.join(item)
+            for item in os.listdir(extracted):
                 if item in SAFE:
                     continue
-                if os.path.isdir(s):
-                    shutil.copytree(s, d)
+
+                src = os.path.join(extracted, item)
+                dst = item
+
+                if os.path.isdir(src):
+                    shutil.copytree(src, dst)
                 else:
-                    shutil.copy2(s, d)
+                    shutil.copy2(src, dst)
 
         except Exception as e:
             await msg.edit(f"❌ Update failed during replace:\n`{e}`")
             return
 
-        await msg.edit("✅ Update installed!\nPlease restart your bot.")
+        await msg.edit("✅ Update installed successfully!\nPlease restart your bot.")
