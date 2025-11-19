@@ -1,55 +1,45 @@
-from telethon import events
 import requests
 import os
+from telethon import events
 
-API = "https://widipe.com/download/ytmp4?url={}"
+API_YT = "https://api-aswin-sparky.koyeb.app/api/downloader/ytv?url="
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/yt(?:\s|$)(.*)"))
+    @bot.on(events.NewMessage(pattern=r"^/yt (.+)"))
     async def yt(event):
-
-        url = event.pattern_match.group(1).strip()
-
-        if not url:
-            return await event.reply("❗ Send a YouTube link.\nExample: `/yt https://youtu.be/...`")
+        link = event.pattern_match.group(1).strip()
+        msg = await event.reply("⬇️ Downloading video…")
 
         try:
-            await event.react("⌛")
-        except:
-            pass
+            api_url = API_YT + link
+            r = requests.get(api_url, timeout=30).json()
 
-        msg = await event.reply("📥 Downloading video...")
+            if "data" not in r or not r["data"]:
+                return await msg.edit("❌ Unable to download this video.")
 
-        try:
-            r = requests.get(API.format(url)).json()
+            data = r["data"]
+            vid_url = data.get("url")
+            title = data.get("title", "video")
 
-            if "result" not in r:
-                return await msg.edit("❌ API error or unsupported link.")
+            if not vid_url:
+                return await msg.edit("❌ No downloadable file found.")
 
-            video = r["result"]
-            title = video.get("title", "video")
-            download_url = video.get("url")
+            filename = "youtube_video.mp4"
 
-            filename = title.replace("/", "_")[:50] + ".mp4"
-
-            file = requests.get(download_url)
-
+            # Download video
+            video = requests.get(vid_url, timeout=60).content
             with open(filename, "wb") as f:
-                f.write(file.content)
+                f.write(video)
 
-            await bot.send_file(event.chat_id, filename, caption=f"🎬 **{title}**", reply_to=event.id)
-
-            os.remove(filename)
-
-            try:
-                await event.react("✅")
-            except:
-                pass
+            await bot.send_file(
+                event.chat_id,
+                filename,
+                caption=f"🎬 **{title}**"
+            )
 
             await msg.delete()
+            os.remove(filename)
 
         except Exception as e:
-            await msg.edit(f"❌ Error: {e}")
-            try: await event.react("❌")
-            except: pass
+            await msg.edit(f"❌ Error:\n`{e}`")
