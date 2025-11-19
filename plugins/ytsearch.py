@@ -1,41 +1,37 @@
-from telethon import events
 import requests
+from telethon import events
 
-API = "https://widipe.com/search/youtube?query={}"
+API_SEARCH = "https://api-aswin-sparky.koyeb.app/api/search/youtube?query="
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/ytsearch ?(.*)"))
+    @bot.on(events.NewMessage(pattern=r"^/ytsearch (.+)"))
     async def ytsearch(event):
-
         query = event.pattern_match.group(1).strip()
-
-        if not query:
-            return await event.reply("❗ Give something to search.\nExample: `/ytsearch alan walker`")
-
-        msg = await event.reply("🔎 Searching...")
+        msg = await event.reply("🔎 Searching YouTube…")
 
         try:
-            r = requests.get(API.format(query))
-            data = r.json()
+            url = API_SEARCH + query.replace(" ", "+")
+            r = requests.get(url, timeout=20).json()
 
-            if "data" not in data or len(data["data"]) == 0:
+            if "data" not in r or len(r["data"]) == 0:
                 return await msg.edit("❌ No results found.")
 
-            results = data["data"][:10]
+            results = r["data"]
+            text = "**🔍 YouTube Search Results:**\n\n"
 
-            txt = f"**🔎 YouTube Search Results:** `{query}`\n\n"
+            for item in results[:10]:
+                title = item.get("title", "N/A")
+                link = item.get("url", "N/A")
+                duration = item.get("duration", "N/A")
+                channel = item.get("channel", "N/A")
 
-            for i, v in enumerate(results, start=1):
-                title = v.get("title")
-                url = v.get("url")
-                channel = v.get("channel")
-                duration = v.get("duration")
+                text += f"🎬 **{title}**\n"
+                text += f"📺 Channel: `{channel}`\n"
+                text += f"⏱ Duration: `{duration}`\n"
+                text += f"🔗 {link}\n\n"
 
-                txt += f"**{i}. {title}**\n"
-                txt += f"🕒 {duration}\n👤 {channel}\n🔗 {url}\n\n"
-
-            await msg.edit(txt)
+            await msg.edit(text)
 
         except Exception as e:
-            await msg.edit(f"❌ Error: {e}")
+            await msg.edit(f"❌ Error:\n`{e}`")
