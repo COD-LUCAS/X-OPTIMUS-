@@ -25,6 +25,11 @@ A powerful Telegram bot built with Python that provides comprehensive automation
 Before deploying the bot, you'll need to obtain the following credentials:
 
 1. **API ID** and **API Hash** - Get these from [my.telegram.org](https://my.telegram.org)
+   
+   <a href="https://youtube.com/shorts/9A04yQnUD5I?si=qLCV9B-Trwi6-1Vj">
+     <img src="https://img.shields.io/badge/📺_Watch-How_to_Get_API_ID_&_HASH-red?style=for-the-badge&logo=youtube" alt="How to Get API ID and HASH">
+   </a>
+
 2. **Session String** - Generate using the button below
 
 <p align="center">
@@ -112,7 +117,4 @@ Your bot will be deployed on Koyeb's global infrastructure!
 For support, feature requests, or updates:
 - Contact via Telegram: [@codlucas](https://t.me/codlucas)
 - Check the [GitHub repository](https://github.com/COD-LUCAS) for documentation and issues
-
----
-
-<p align="center">Made with ❤️ by Lucas</p>
+- 
