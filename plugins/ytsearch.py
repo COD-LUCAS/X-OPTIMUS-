@@ -1,7 +1,7 @@
 from telethon import events
 import requests
 
-API = "https://api-aswin-sparky.koyeb.app/api/search/youtube?query={}"
+API = "https://widipe.com/search/youtube?query={}"
 
 def register(bot):
 
@@ -11,31 +11,31 @@ def register(bot):
         query = event.pattern_match.group(1).strip()
 
         if not query:
-            return await event.reply("❗ Give a search term.\nExample: `/ytsearch Alan Walker`")
+            return await event.reply("❗ Give something to search.\nExample: `/ytsearch alan walker`")
 
-        msg = await event.reply("🔎 Searching YouTube...")
+        msg = await event.reply("🔎 Searching...")
 
         try:
             r = requests.get(API.format(query))
             data = r.json()
 
-            if not data.get("status") or "results" not in data:
+            if "data" not in data or len(data["data"]) == 0:
                 return await msg.edit("❌ No results found.")
 
-            results = data["results"][:10]
+            results = data["data"][:10]
 
-            text = f"**🔎 YouTube Search Results for:** `{query}`\n\n"
+            txt = f"**🔎 YouTube Search Results:** `{query}`\n\n"
 
             for i, v in enumerate(results, start=1):
-                title = v.get("title", "Unknown title")
-                url = v.get("url", "No link")
-                duration = v.get("duration", "N/A")
-                channel = v.get("channel", "N/A")
+                title = v.get("title")
+                url = v.get("url")
+                channel = v.get("channel")
+                duration = v.get("duration")
 
-                text += f"**{i}. {title}**\n"
-                text += f"🕒 {duration}\n👤 {channel}\n🔗 {url}\n\n"
+                txt += f"**{i}. {title}**\n"
+                txt += f"🕒 {duration}\n👤 {channel}\n🔗 {url}\n\n"
 
-            await msg.edit(text)
+            await msg.edit(txt)
 
         except Exception as e:
             await msg.edit(f"❌ Error: {e}")
