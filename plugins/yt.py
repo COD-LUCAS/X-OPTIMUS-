@@ -2,11 +2,11 @@ from telethon import events
 import requests
 import os
 
-API = "https://api-aswin-sparky.koyeb.app/api/downloader/ytv?url={}"
+API = "https://widipe.com/download/ytmp4?url={}"
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/yt ?(.*)"))
+    @bot.on(events.NewMessage(pattern=r"^/yt(?:\s|$)(.*)"))
     async def yt(event):
 
         url = event.pattern_match.group(1).strip()
@@ -14,7 +14,6 @@ def register(bot):
         if not url:
             return await event.reply("❗ Send a YouTube link.\nExample: `/yt https://youtu.be/...`")
 
-        # Reaction loading
         try:
             await event.react("⌛")
         except:
@@ -23,30 +22,23 @@ def register(bot):
         msg = await event.reply("📥 Downloading video...")
 
         try:
-            res = requests.get(API.format(url)).json()
+            r = requests.get(API.format(url)).json()
 
-            if not res.get("status"):
-                return await msg.edit("❌ Unable to download this video.")
+            if "result" not in r:
+                return await msg.edit("❌ API error or unsupported link.")
 
-            info = res["data"]
-            video_url = info["url"]
-            title = info.get("title", "video")
+            video = r["result"]
+            title = video.get("title", "video")
+            download_url = video.get("url")
 
-            safe_title = "".join(c for c in title if c not in "<>:\"/\\|?*")[:50]
-            filename = f"{safe_title}.mp4"
+            filename = title.replace("/", "_")[:50] + ".mp4"
 
-            # Download video
-            video = requests.get(video_url)
+            file = requests.get(download_url)
 
             with open(filename, "wb") as f:
-                f.write(video.content)
+                f.write(file.content)
 
-            await bot.send_file(
-                event.chat_id,
-                filename,
-                caption=f"🎬 **{title}**",
-                reply_to=event.id
-            )
+            await bot.send_file(event.chat_id, filename, caption=f"🎬 **{title}**", reply_to=event.id)
 
             os.remove(filename)
 
@@ -58,8 +50,6 @@ def register(bot):
             await msg.delete()
 
         except Exception as e:
-            try:
-                await event.react("❌")
-            except:
-                pass
             await msg.edit(f"❌ Error: {e}")
+            try: await event.react("❌")
+            except: pass
