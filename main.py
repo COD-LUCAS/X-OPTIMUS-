@@ -2,98 +2,96 @@ import os
 import importlib
 import platform
 from dotenv import load_dotenv
-from telethon import TelegramClient, events
+from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-paths = [
+CONFIGS = [
     "container_data/config.env",
     "/home/container/container_data/config.env",
-    "/home/container_data/config.env"
+    "/home/container/config.env"
 ]
 
-ok = False
-for p in paths:
-    if os.path.exists(p):
-        load_dotenv(p)
-        ok = True
+loaded = False
+for c in CONFIGS:
+    if os.path.exists(c):
+        load_dotenv(c)
+        loaded = True
         break
 
-if not ok:
+if not loaded:
     print("Missing config.env")
     exit()
 
-API_ID = int(os.getenv("API_ID", "0"))
+API_ID = os.getenv("API_ID", "")
 API_HASH = os.getenv("API_HASH", "")
 STRING = os.getenv("STRING_SESSION", "")
+OWNER = os.getenv("OWNER", "")
 
 if not API_ID or not API_HASH or not STRING:
-    print("Missing required credentials")
+    print("Missing API_ID/API_HASH/STRING_SESSION")
     exit()
 
-try:
-    from webserver import start_webserver
-    start_webserver()
-except:
-    pass
+API_ID = int(API_ID)
+
+from webserver import start_webserver
+start_webserver()
 
 bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
-loaded_plugins = {}
+plugins = {}
 
 def load_plugins():
     count = 0
-    folders = ["plugins", "container_data/user_plugins"]
-    for folder in folders:
+    paths = ["plugins", "container_data/user_plugins"]
+
+    for folder in paths:
         if not os.path.exists(folder):
             continue
+
         for f in os.listdir(folder):
             if f.endswith(".py") and f != "__init__.py":
                 name = f[:-3]
+                module_path = f"{folder.replace('/', '.')}.{name}"
+
                 try:
-                    module = importlib.import_module(f"{folder.replace('/', '.')}.{name}")
-                    loaded_plugins[name] = module
+                    module = importlib.import_module(module_path)
+                    plugins[name] = module
                     if hasattr(module, "register"):
                         module.register(bot)
                     count += 1
                 except Exception as e:
-                    print("Plugin error:", name, e)
-    return count
+                    print(f"Plugin error in {name}: {e}")
 
+    return count
 
 async def start_bot():
     print("══════════════════════")
     print("🚀 X-OPTIMUS STARTING")
     print("══════════════════════")
 
-    await bot.start()
-
-    me = await bot.get_me()
-    bot.owner_id = me.id
-    bot.MODE = os.getenv("MODE", "PUBLIC").upper()
-
-    @bot.on(events.NewMessage)
-    async def mode_block(event):
-        if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
-            return
-
     total = load_plugins()
 
-    for module in loaded_plugins.values():
-        if hasattr(module, "on_startup"):
-            try:
-                await module.on_startup(bot)
-            except:
-                pass
-
     print("🆔 API ID:", API_ID)
-    print("👑 Owner:", bot.owner_id)
+    print("👑 Owner:", OWNER if OWNER else "Auto")
     print("📦 Plugins Loaded:", total)
     print("💻 Platform:", platform.system())
     print("══════════════════════")
+
+    await bot.start()
+
+    me = await bot.get_me()
+    global OWNER
+    if not OWNER:
+        OWNER = str(me.id)
+
+    for m in plugins.values():
+        if hasattr(m, "on_startup"):
+            try:
+                await m.on_startup(bot)
+            except:
+                pass
+
     print("🟢 BOT ONLINE & RUNNING")
     print("══════════════════════")
 
-    while True:
-        await bot.run_until_disconnected()
-
-
 bot.loop.run_until_complete(start_bot())
+bot.run_until_disconnected()
