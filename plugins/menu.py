@@ -28,14 +28,15 @@ def register(bot):
             "checkupdate": "Check bot updates"
         }
 
-        hidden_files = ["updater_notify.py", "startup.py"]
-        user_plugin_dir = "./X-OPTIMUS/plugins/user_plugins"
-        installed_plugins = []
+        hidden = ["updater_notify.py", "startup.py"]
 
-        if os.path.exists(user_plugin_dir):
-            for f in os.listdir(user_plugin_dir):
-                if f.endswith(".py") and f not in hidden_files:
-                    installed_plugins.append(f.replace(".py", ""))
+        plugin_dir = "./X-OPTIMUS/plugins/user_plugins"
+        installed = []
+
+        if os.path.exists(plugin_dir):
+            for f in os.listdir(plugin_dir):
+                if f.endswith(".py") and f not in hidden:
+                    installed.append(f.replace(".py", ""))
 
         txt = "✦ **X-OPTIMUS COMMAND MENU** ✦\n\n"
 
@@ -48,10 +49,26 @@ def register(bot):
             txt += f"• `{name}` — {desc}\n"
 
         txt += "\n📦 **INSTALLED PLUGINS**\n\n"
-        if installed_plugins:
-            for p in installed_plugins:
+        if installed:
+            for p in installed:
                 txt += f"• `{p}`\n"
         else:
             txt += "No plugins installed.\n"
 
-        await event.reply(txt)
+        image_paths = [
+            "./assets/menu.jpg",
+            "./X-OPTIMUS/assets/menu.jpg",
+            "./X-OPTIMUS/menu.jpg",
+            "./menu.jpg"
+        ]
+
+        img = None
+        for path in image_paths:
+            if os.path.exists(path):
+                img = path
+                break
+
+        if img:
+            await bot.send_file(event.chat_id, img, caption=txt)
+        else:
+            await event.reply(txt)
