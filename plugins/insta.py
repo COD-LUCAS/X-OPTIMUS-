@@ -1,61 +1,48 @@
-import requests
-
 from telethon import events
+import requests
+import os
+import importlib
 
-API = "https://api.sparky.biz.id/api/downloader/igdl?url="
+USER_PLUGIN_DIR = "plugins/user_plugins"
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"https?://(www\.)?instagram\.com/[^\s]+"))
+    @bot.on(events.NewMessage(pattern=r"^/install (.+) (.+)$"))
+    async def install_plugin(event):
+        url = event.pattern_match.group(1).strip()
+        name = event.pattern_match.group(2).strip()
 
-    async def insta(event):
+        if not name.endswith(".py"):
+            name = f"{name}.py"
 
-        url = event.pattern_match.group(0)
+        if not os.path.exists(USER_PLUGIN_DIR):
+            os.makedirs(USER_PLUGIN_DIR)
 
-        status = await event.reply("📥 Downloading from Instagram…")
+        save_path = os.path.join(USER_PLUGIN_DIR, name)
+
+        await event.reply("⏳ Downloading plugin...")
 
         try:
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            code = response.text
 
-            res = requests.get(API + url).json()
+            with open(save_path, "w", encoding="utf-8") as f:
+                f.write(code)
 
-            if not res.get("status"):
+            # AUTO LOAD PLUGIN
+            module_path = f"plugins.user_plugins.{name[:-3]}"
 
-                return await status.edit("❌ Failed to download. Invalid or unsupported link.")
+            try:
+                module = importlib.import_module(module_path)
 
-            count = 0
+                if hasattr(module, "register"):
+                    module.register(bot)
 
-            for item in res.get("data", []):
+                await event.reply(f"✅ Plugin `{name}` installed & loaded successfully!")
 
-                media = item.get("url")
-
-                if not media:
-
-                    continue
-
-                count += 1
-
-                if item.get("type") == "image":
-
-                    await bot.send_file(event.chat_id, media, caption="", reply_to=event.id)
-
-                elif item.get("type") == "video":
-
-                    await bot.send_file(event.chat_id, media, caption="", reply_to=event.id)
-
-                else:
-
-                    await bot.send_file(event.chat_id, media, caption="", reply_to=event.id)
-
-            await status.delete()
-
-            if count == 0:
-
-                await event.reply("⚠ No downloadable media found.")
-
-            else:
-
-                await event.reply(f"✅ Sent {count} media file(s).")
+            except Exception as e:
+                await event.reply(f"⚠️ Installed but failed to auto-load:\n`{e}`\nRestart bot!")
 
         except Exception as e:
-
-            await status.edit(f"⚠ Error: {e}")
+            await event.reply(f"❌ Install failed:\n`{e}`")
