@@ -78,8 +78,16 @@ async def start_bot():
     print("📦 Plugins Loaded:", total)
     print("💻 Platform:", platform.system())
     print("══════════════════════")
+await bot.start()
 
-    await bot.start()
+MODE = os.getenv("MODE", "PUBLIC").upper()
+
+if MODE == "PRIVATE":
+    async def private_filter(event):
+        if event.sender_id != bot.owner_id:
+            return False
+        return True
+    bot.add_event_handler(private_filter)
 
     for module in loaded_plugins.values():
         if hasattr(module, "on_startup"):
