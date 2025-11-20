@@ -6,89 +6,101 @@ from telethon import events
 
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
-SAFE = [
-    "config_data/config.env",
-    "plugins/user_plugins"
+SAFE_DIRS = [
+    "plugins/user_plugins",
 ]
+
+SAFE_FILES = [
+    "container_data/config.env",
+]
+
+def is_safe(path):
+    for s in SAFE_DIRS:
+        if path == s or path.startswith(s + "/"):
+            return True
+    for f in SAFE_FILES:
+        if path == f:
+            return True
+    return False
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/update$"))
     async def update(event):
+
         msg = await event.reply("⬇️ Downloading update...")
 
+        # Download ZIP
         try:
             if os.path.exists("update_temp"):
                 shutil.rmtree("update_temp")
             os.makedirs("update_temp", exist_ok=True)
-            
-            zdata = requests.get(ZIP_URL, timeout=20, verify=False).content
-            open("update.zip", "wb").write(zdata)
+
+            data = requests.get(ZIP_URL, timeout=20, verify=False).content
+            open("update.zip", "wb").write(data)
+
         except Exception as e:
-            await msg.edit(f"❌ Download failed:\n`{e}`")
-            return
+            return await msg.edit(f"❌ Download failed:\n`{e}`")
 
         await msg.edit("📦 Extracting update...")
 
+        # Extract ZIP
         try:
             with zipfile.ZipFile("update.zip") as z:
                 z.extractall("update_temp")
+
         except Exception as e:
-            await msg.edit(f"❌ Extract failed:\n`{e}`")
-            return
+            return await msg.edit(f"❌ Extraction failed:\n`{e}`")
+
         finally:
             if os.path.exists("update.zip"):
                 os.remove("update.zip")
 
-        try:
-            dirlist = [
-                d for d in os.listdir("update_temp")
-                if os.path.isdir(os.path.join("update_temp", d))
-            ]
+        # Detect extracted folder
+        root_dir = os.listdir("update_temp")[0]
+        extracted = os.path.join("update_temp", root_dir)
 
-            if not dirlist:
-                await msg.edit("❌ Update failed: No extracted source folder found.")
-                return
+        # If repo contains X-OPTIMUS folder inside it
+        if os.path.exists(os.path.join(extracted, "X-OPTIMUS")):
+            extracted = os.path.join(extracted, "X-OPTIMUS")
 
-            extracted = os.path.join("update_temp", dirlist[0])
-
-        except Exception as e:
-            await msg.edit(f"❌ Folder detection failed:\n`{e}`")
-            return
-
-        await msg.edit("♻️ Replacing files...")
+        await msg.edit("♻️ Updating bot...")
 
         try:
-            for item in os.listdir():
-                if item in SAFE or item.startswith("."):
+            # Remove old files EXCEPT SAFE
+            for item in os.listdir("."):
+
+                if item in ("update_temp", ".git", ".cache"):
                     continue
-                if item == "update_temp":
-                    continue 
 
-                if os.path.isfile(item):
-                    os.remove(item)
+                path = item
+
+                if is_safe(path):
+                    continue
+
+                if os.path.isfile(path):
+                    os.remove(path)
                 else:
-                    shutil.rmtree(item)
+                    shutil.rmtree(path)
 
+            # Copy new files EXCEPT SAFE
             for item in os.listdir(extracted):
-                if item in SAFE:
-                    continue
 
                 src = os.path.join(extracted, item)
                 dst = item
 
+                if is_safe(dst):
+                    continue
+
                 if os.path.isdir(src):
-                    shutil.copytree(src, dst) 
+                    shutil.copytree(src, dst, dirs_exist_ok=True)
                 else:
                     shutil.copy2(src, dst)
 
         except Exception as e:
-            await msg.edit(f"❌ Update failed during replace:\n`{e}`")
-            return
-        
-        finally:
-            if os.path.exists("update_temp"):
-                shutil.rmtree("update_temp")
+            return await msg.edit(f"❌ Update failed:\n`{e}`")
 
-        await msg.edit("✅ Update installed successfully!\nPlease **reboot your bot**.")
-        
+        finally:
+            shutil.rmtree("update_temp", ignore_errors=True)
+
+        await msg.edit("✅ Update completed!\nRestart with **/reboot**")
