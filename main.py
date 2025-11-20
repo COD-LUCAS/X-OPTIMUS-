@@ -30,11 +30,7 @@ if not API_ID or not API_HASH or not STRING:
     print("Missing required credentials")
     exit()
 
-try:
-    API_ID = int(API_ID)
-except:
-    print("API_ID must be integer")
-    exit()
+API_ID = int(API_ID)
 
 try:
     from webserver import start_webserver
@@ -70,18 +66,18 @@ async def start_bot():
     print("🚀 X-OPTIMUS STARTING")
     print("══════════════════════")
 
-    total = load_plugins()
+    await bot.start()
 
     me = await bot.get_me()
     bot.owner_id = me.id
+
+    total = load_plugins()
 
     print("🆔 API ID:", API_ID)
     print("👑 Owner:", bot.owner_id)
     print("📦 Plugins Loaded:", total)
     print("💻 Platform:", platform.system())
     print("══════════════════════")
-
-    await bot.start()
 
     for module in loaded_plugins.values():
         if hasattr(module, "on_startup"):
