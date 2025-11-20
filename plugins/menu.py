@@ -15,6 +15,7 @@ def register(bot):
             "/mode": "Change bot mode",
             "/install": "Install plugins",
             "/reboot": "Restart the bot"
+            "/info": "get info of the bot"
         }
 
         built_in_plugins = {
