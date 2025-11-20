@@ -25,7 +25,6 @@ if not ok:
 API_ID = os.getenv("API_ID", "")
 API_HASH = os.getenv("API_HASH", "")
 STRING = os.getenv("STRING_SESSION", "")
-OWNER = os.getenv("OWNER", "Unknown")
 
 if not API_ID or not API_HASH or not STRING:
     print("Missing required credentials")
@@ -62,8 +61,8 @@ def load_plugins():
                     if hasattr(module, "register"):
                         module.register(bot)
                     count += 1
-                except Exception as e:
-                    print(f"Plugin error {name}: {e}")
+                except:
+                    pass
     return count
 
 async def start_bot():
@@ -73,21 +72,16 @@ async def start_bot():
 
     total = load_plugins()
 
+    me = await bot.get_me()
+    bot.owner_id = me.id
+
     print("🆔 API ID:", API_ID)
-    print("👑 Owner:", OWNER)
+    print("👑 Owner:", bot.owner_id)
     print("📦 Plugins Loaded:", total)
     print("💻 Platform:", platform.system())
     print("══════════════════════")
-await bot.start()
 
-MODE = os.getenv("MODE", "PUBLIC").upper()
-
-if MODE == "PRIVATE":
-    async def private_filter(event):
-        if event.sender_id != bot.owner_id:
-            return False
-        return True
-    bot.add_event_handler(private_filter)
+    await bot.start()
 
     for module in loaded_plugins.values():
         if hasattr(module, "on_startup"):
