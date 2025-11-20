@@ -1,50 +1,33 @@
 from telethon import events
 import requests
 import os
-import importlib
-
-PLUGIN_PATH = "plugins/user_plugins"
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/install (.+) (.+)$"))
-    async def install_handler(event):
-
-        url = event.pattern_match.group(1).strip()
-        name = event.pattern_match.group(2).strip()
-
-        # force extension
-        if not name.endswith(".py"):
-            name += ".py"
-
-        # create plugin folder if missing
-        if not os.path.exists(PLUGIN_PATH):
-            os.makedirs(PLUGIN_PATH)
-
-        file_path = f"{PLUGIN_PATH}/{name}"
-
-        await event.reply("⏳ Downloading plugin...")
-
+    @bot.on(events.NewMessage(pattern=r"^/install (.+)$"))
+    async def install_plugin(event):
         try:
-            # download code
-            r = requests.get(url, timeout=10)
-            r.raise_for_status()
+            url = event.pattern_match.group(1).strip()
 
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(r.text)
+            # auto detect plugin name
+            name = url.split("/")[-1].replace(".py", "")
+            if not name:
+                await event.reply("❌ Invalid plugin name.")
+                return
 
-            # load plugin instantly
-            module_path = f"plugins.user_plugins.{name[:-3]}"
+            folder = "plugins/user_plugins"
+            os.makedirs(folder, exist_ok=True)
 
-            try:
-                module = importlib.import_module(module_path)
-                if hasattr(module, "register"):
-                    module.register(bot)
+            path = f"{folder}/{name}.py"
 
-                await event.reply(f"✅ Plugin `{name}` installed & loaded!")
+            await event.reply("⬇️ Downloading plugin...")
 
-            except Exception as e:
-                await event.reply(f"⚠ Installed but load error:\n`{e}`\nRestart bot.")
+            code = requests.get(url, timeout=20).text
+
+            with open(path, "w") as f:
+                f.write(code)
+
+            await event.reply(f"✅ Plugin **{name}** installed!\n🔄 Restart bot to activate.")
 
         except Exception as e:
-            await event.reply(f"❌ Install failed:\n`{e}`")
+            await event.reply(f"❌ Install Failed:\n`{e}`")
