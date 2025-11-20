@@ -14,7 +14,7 @@ def register(bot):
             "/ping": "Check bot latency",
             "/mode": "Change bot mode",
             "/install": "Install plugins",
-            "/reboot": "Restart the bot"
+            "/reboot": "Restart the bot",
             "/info": "get info of the bot"
         }
 
