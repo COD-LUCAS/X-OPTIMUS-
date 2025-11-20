@@ -1,6 +1,12 @@
 {
-  "version": "1.0.6",
-  "changelog": [
-    "ADDED BROADCAST/ADD"
-  ]
+    "version": "1.0.3",
+    "changelog": [
+        "Initial stable release of X-OPTIMUS",
+        "Auto owner detection added",
+        "Improved plugin loader",
+        "Global PRIVATE mode protection",
+        "Render/VPS auto keep-alive",
+        "Main.py optimized"
+    ],
+    "update_url": "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 }
