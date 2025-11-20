@@ -100,6 +100,55 @@ Leverage Koyeb's worldwide infrastructure for optimal performance!
 7. **Version Management** - Execute `/update` command when new versions are available
 
 > 🔧 **Manual updates needed** - Use `/update` command for version upgrades
+> ## 🟢 Keep Your Bot Online 24/7 (UptimeRobot Setup)
+
+Render free plan sleeps after **15 minutes** unless it receives traffic.  
+Follow these steps to keep your bot always online:
+
+---
+
+### ✅ Step 1 — Your Bot Must Have a Web Server
+Make sure your bot starts a web server on Render.
+
+If your bot already shows a Render URL like:https://name.onrender.com
+
+you are ready.
+
+---
+
+### ✅ Step 2 — Create an UptimeRobot Account
+Go here:
+
+🔗 https://uptimerobot.com/
+
+Sign up → Log in → Click **Add New Monitor**
+
+---
+
+### ✅ Step 3 — Add Monitor
+Fill the monitor details:
+
+| Field | Value |
+|------|--------|
+| **Monitor Type** | HTTP(s) |
+| **Friendly Name** | Your Bot Name |
+| **URL** | `https://your-render-url.onrender.com/` |
+| **Interval** | Every 5 minutes |
+| **Status** | Enabled |
+
+Click **Create Monitor**
+
+---
+
+### ❇ What This Does
+UptimeRobot sends a ping to your bot every 5 minutes →  
+Render sees activity →  
+Your free instance **never sleeps**.
+
+---
+
+### 🎉 Done!
+Your bot will now stay **online 24/7** without upgrading Render.
 
 ---
 
