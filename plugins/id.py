@@ -7,27 +7,37 @@ def register(bot):
     async def user_id(event):
         target = event.pattern_match.group(1)
 
-        if event.is_reply and not target:
-            replied = await event.get_reply_message()
-            user = await bot(GetFullUserRequest(replied.sender_id))
-        else:
-            if not target:
-                return await event.reply("Usage: /id @user | user_id | reply")
-            try:
+        try:
+            # Reply case
+            if event.is_reply and not target:
+                msg = await event.get_reply_message()
+                entity = await bot.get_entity(msg.sender_id)
+
+            else:
+                if not target:
+                    return await event.reply("Usage: /id @user | user_id | reply")
                 try:
-                    user = await bot(GetFullUserRequest(int(target)))
+                    # Try numeric
+                    entity = await bot.get_entity(int(target))
                 except:
-                    user = await bot(GetFullUserRequest(target))
-            except:
-                return await event.reply("User not found.")
+                    # Try username
+                    entity = await bot.get_entity(target)
 
-        u = user.user
-        out = f"**USER INFO**\n\n"
-        out += f"ID: `{u.id}`\n"
-        out += f"Access Hash: `{u.access_hash}`\n"
-        if u.username:
-            out += f"Username: @{u.username}\n"
-        if u.phone:
-            out += f"Phone: `{u.phone}`\n"
+            full = await bot(GetFullUserRequest(entity.id))
+            u = full.user
 
-        await event.reply(out)
+            out = "**USER INFO**\n\n"
+            out += f"ID: `{u.id}`\n"
+            out += f"Access Hash: `{u.access_hash}`\n"
+            if u.username:
+                out += f"Username: @{u.username}\n"
+            if u.phone:
+                out += f"Phone: `{u.phone}`\n"
+            out += f"First Name: `{u.first_name}`\n"
+            if u.last_name:
+                out += f"Last Name: `{u.last_name}`\n"
+
+            await event.reply(out)
+
+        except Exception as e:
+            await event.reply(f"❌ Failed to fetch user.\n`{e}`")
