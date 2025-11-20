@@ -1,48 +1,48 @@
-from telethon import events
-import requests
-import os
-import importlib
+@dp.message_handler(commands=['install'])
+async def install_plugin(message: types.Message):
+    import aiohttp, os
+    
+    # Split command
+    parts = message.text.split(" ")
+    if len(parts) < 2:
+        return await message.reply("❌ Usage: /install <raw_plugin_url>")
 
-USER_PLUGIN_DIR = "plugins/user_plugins"
+    url = parts[1]
 
-def register(bot):
+    # Basic validation
+    if not url.startswith("http"):
+        return await message.reply("❌ Invalid URL")
 
-    @bot.on(events.NewMessage(pattern=r"^/install (.+) (.+)$"))
-    async def install_plugin(event):
-        url = event.pattern_match.group(1)
-        name = event.pattern_match.group(2)
+    await message.reply("⏳ Downloading plugin...")
 
-        if not name.endswith(".py"):
-            filename = f"{name}.py"
-        else:
-            filename = name
+    try:
+        # Try downloading
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return await message.reply(f"❌ Error downloading plugin (HTTP {resp.status})")
 
-        if not os.path.exists(USER_PLUGIN_DIR):
-            os.makedirs(USER_PLUGIN_DIR)
+                plugin_code = await resp.text()
 
-        save_path = os.path.join(USER_PLUGIN_DIR, filename)
+        # Save plugin
+        plugin_name = url.split("/")[-1]
+        folder = "plugins"
 
-        await event.reply("⏳ Downloading plugin...")
+        # Create folder if not exist
+        if not os.path.exists(folder):
+            os.makedirs(folder)
 
-        try:
-            # Fetch plugin content
-            response = requests.get(url, timeout=20)
-            response.raise_for_status()
-            code = response.text
+        path = f"{folder}/{plugin_name}"
 
-            # Save plugin file
-            with open(save_path, "w", encoding="utf-8") as f:
-                f.write(code)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(plugin_code)
 
-            # Try to auto-load plugin without restart
-            module_path = f"plugins.user_plugins.{filename[:-3]}"
-            try:
-                module = importlib.import_module(module_path)
-                if hasattr(module, "register"):
-                    module.register(bot)
-                await event.reply(f"✅ Plugin `{filename}` installed & loaded!")
-            except Exception as e:
-                await event.reply(f"⚠️ Installed but could not auto-load:\n`{e}`\nRestart bot to load manually.")
+        await message.reply(
+            f"✅ Plugin Installed Successfully!\n"
+            f"📄 File: `{plugin_name}`\n"
+            f"📁 Saved to: `{path}`\n"
+            f"⚠️ Restart bot to load plugin."
+        )
 
-        except Exception as e:
-            await event.reply(f"❌ Install failed:\n`{e}`")
+    except Exception as e:
+        await message.reply(f"❌ Error: `{str(e)}`")
