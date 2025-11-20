@@ -18,8 +18,6 @@ def register(bot):
         }
 
         built_in_plugins = {
-            "add": "Add users to group",
-            "broadcast": "Broadcast messages to IDs",
             "id": "Get user ID info",
             "insta": "Instagram downloader",
             "mp3": "YouTube to MP3",
