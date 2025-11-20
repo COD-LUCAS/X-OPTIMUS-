@@ -1,33 +1,36 @@
-from telethon import events
-import requests
 import os
+import requests
+from telethon import events
+
+USER_PLUGIN_DIR = "plugins/user_plugins"
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/install (.+)$"))
+    @bot.on(events.NewMessage(pattern=r"^/install(?:\s+(https?://\S+)\s+(\S+))?$"))
     async def install_plugin(event):
+        url = event.pattern_match.group(1)
+        name = event.pattern_match.group(2)
+
+        # If /install used without arguments → show usage
+        if not url or not name:
+            await event.reply(
+                "❗Usage:\n`/install {raw_github_url} {plugin_name}`\n\n"
+                "Example:\n`/install https://gist.github.com/raw/123abc/insta.py insta`"
+            )
+            return
+
+        # Ensure folder exists
+        if not os.path.exists(USER_PLUGIN_DIR):
+            os.makedirs(USER_PLUGIN_DIR)
+
+        path = os.path.join(USER_PLUGIN_DIR, f"{name}.py")
+
         try:
-            url = event.pattern_match.group(1).strip()
-
-            # auto detect plugin name
-            name = url.split("/")[-1].replace(".py", "")
-            if not name:
-                await event.reply("❌ Invalid plugin name.")
-                return
-
-            folder = "plugins/user_plugins"
-            os.makedirs(folder, exist_ok=True)
-
-            path = f"{folder}/{name}.py"
-
-            await event.reply("⬇️ Downloading plugin...")
-
-            code = requests.get(url, timeout=20).text
-
+            code = requests.get(url).text
             with open(path, "w") as f:
                 f.write(code)
 
-            await event.reply(f"✅ Plugin **{name}** installed!\n🔄 Restart bot to activate.")
+            await event.reply(f"✅ Plugin `{name}` installed successfully.\nReboot bot to load it.")
 
         except Exception as e:
-            await event.reply(f"❌ Install Failed:\n`{e}`")
+            await event.reply(f"❌ Install failed:\n`{e}`")
