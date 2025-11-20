@@ -2,7 +2,7 @@ import os
 import importlib
 import platform
 from dotenv import load_dotenv
-from telethon import TelegramClient
+from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
 paths = [
@@ -57,8 +57,8 @@ def load_plugins():
                     if hasattr(module, "register"):
                         module.register(bot)
                     count += 1
-                except:
-                    pass
+                except Exception as e:
+                    print("Plugin error:", name, e)
     return count
 
 async def start_bot():
@@ -70,6 +70,12 @@ async def start_bot():
 
     me = await bot.get_me()
     bot.owner_id = me.id
+    bot.MODE = os.getenv("MODE", "PUBLIC").upper()
+
+    @bot.on(events.NewMessage)
+    async def global_mode_block(event):
+        if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
+            return
 
     total = load_plugins()
 
@@ -78,16 +84,11 @@ async def start_bot():
     print("📦 Plugins Loaded:", total)
     print("💻 Platform:", platform.system())
     print("══════════════════════")
-
-    for module in loaded_plugins.values():
-        if hasattr(module, "on_startup"):
-            try:
-                await module.on_startup(bot)
-            except:
-                pass
-
     print("🟢 BOT ONLINE & RUNNING")
     print("══════════════════════")
 
+    # Prevent Render timeout
+    while True:
+        await bot.run_until_disconnected()
+
 bot.loop.run_until_complete(start_bot())
-bot.run_until_disconnected()
