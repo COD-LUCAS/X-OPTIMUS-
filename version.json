@@ -1,10 +1,6 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "changelog": [
-    "Improved plugin installer",
-    "Added safe remove plugin command",
-    "Fixed /checkupdate version detection",
-    "Added autoinsta auto-downloader",
-    "Main.py stability improvements"
+    "ADDED BROADCAST/ADD"
   ]
 }
