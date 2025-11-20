@@ -1,43 +1,36 @@
 from telethon import events
-from telethon.tl.functions.users import GetFullUserRequest
-from telethon.tl.types import InputPeerUser
 import asyncio
 
 def register(bot):
 
-    async def resolve_user(bot, user_id):
-        try:
-            uid = int(user_id)
-            full = await bot(GetFullUserRequest(uid))
-            return InputPeerUser(full.user.id, full.user.access_hash)
-        except:
-            return None
-
-    @bot.on(events.NewMessage(pattern=r"^/broadcast(?:\s+(.*))?$"))
+    @bot.on(events.NewMessage(pattern=r"^/broadcast\s+(.+)"))
     async def broadcast(event):
-        query = event.pattern_match.group(1)
-        if not query:
-            return await event.reply("Usage: reply to message → /broadcast ids")
+
         if not event.is_reply:
-            return await event.reply("Reply to a message first.")
-        reply_msg = await event.get_reply_message()
-        ids = [x.strip() for x in query.split(",") if x.strip()]
-        status = await event.reply(f"Sending to {len(ids)} users…")
-        success = 0
-        failed = []
+            return await event.reply("Reply to a message.\nUsage: /broadcast id1,id2,id3")
+
+        ids = [i.strip() for i in event.pattern_match.group(1).split(",")]
+        msg = await event.get_reply_message()
+
+        sent = 0
+        failed = 0
+        failed_ids = []
+
+        status = await event.reply("📢 Starting broadcast...")
+
         for uid in ids:
             try:
-                entity = await resolve_user(bot, uid)
-                if not entity:
-                    failed.append(uid)
-                    continue
-                await bot.send_message(entity, reply_msg)
-                success += 1
-                await asyncio.sleep(0.5)
+                entity = await bot.get_entity(int(uid))
+                await bot.send_message(entity, msg)
+                sent += 1
             except:
-                failed.append(uid)
-                await asyncio.sleep(0.3)
-        out = f"✔ Sent: {success}\n✖ Failed: {len(failed)}"
-        if failed:
-            out += "\n" + "\n".join(failed[:10])
-        await status.edit(out)
+                failed += 1
+                failed_ids.append(uid)
+            await asyncio.sleep(0.4)
+
+        text = f"📢 **Broadcast Completed**\n✔ Sent: {sent}\n❌ Failed: {failed}"
+
+        if failed_ids:
+            text += "\n\nFailed:\n" + "\n".join(failed_ids)
+
+        await status.edit(text)
