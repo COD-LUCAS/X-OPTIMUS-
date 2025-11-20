@@ -41,7 +41,7 @@ def register(bot):
 
             await event.reply(
                 f"✅ Plugin **{name}** installed!\n"
-                f"🔄 Restart bot to activate."
+                f"🔄 Reboot bot to activate."
             )
 
         except Exception as e:
