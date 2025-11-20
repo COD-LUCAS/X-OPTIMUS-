@@ -19,7 +19,7 @@ def register(bot):
 
         if not os.path.exists(plugin_path):
             await event.reply(
-                f"❌ Cannot delete `{name}`.\nOnly plugins in `plugins/user_plugins` can be removed."
+                f"❌ Cannot delete `{name}`.\nOnly plugins  `INSTALLED` can be removed."
             )
             return
 
