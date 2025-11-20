@@ -1,6 +1,10 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.5",
   "changelog": [
-    "UPDATED INSTA DOWNLOADER",
+    "Improved plugin installer",
+    "Added safe remove plugin command",
+    "Fixed /checkupdate version detection",
+    "Added autoinsta auto-downloader",
+    "Main.py stability improvements"
   ]
 }
