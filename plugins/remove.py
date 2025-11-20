@@ -1,30 +1,20 @@
 import os
 from telethon import events
 
-USER_PLUGIN_DIR = "plugins/user_plugins"
+USER_DIR = "container_data/user_plugins"
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/remove(?:\s+(.+))?$"))
+    @bot.on(events.NewMessage(pattern=r"^/remove\s+(.+)"))
     async def remove_plugin(event):
-        name = event.pattern_match.group(1)
+        name = event.pattern_match.group(1).strip()
+        path = f"{USER_DIR}/{name}.py"
 
-        # If no plugin name → show usage
-        if not name:
-            await event.reply("❗Usage:\n`/remove {plugin_name}`\n\nTo remove installed plugins only.")
-            return
-
-        name = name.strip()
-        plugin_path = os.path.join(USER_PLUGIN_DIR, f"{name}.py")
-
-        if not os.path.exists(plugin_path):
-            await event.reply(
-                f"❌ Cannot delete `{name}`.\nOnly plugins  `INSTALLED` can be removed."
-            )
-            return
+        if not os.path.exists(path):
+            return await event.reply("❌ Plugin not found in installed plugins.")
 
         try:
-            os.remove(plugin_path)
-            await event.reply(f"✅ Plugin `{name}` removed.\nReboot bot to apply changes.")
+            os.remove(path)
+            await event.reply(f"🗑️ Plugin **{name}** removed.\n🔄 Use `/reboot` to apply changes.")
         except Exception as e:
-            await event.reply(f"❌ Error removing plugin:\n`{e}`")
+            await event.reply(f"❌ Failed to remove plugin:\n`{e}`")
