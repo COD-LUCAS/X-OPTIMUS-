@@ -22,15 +22,13 @@ if not ok:
     print("Missing config.env")
     exit()
 
-API_ID = os.getenv("API_ID", "")
+API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
 STRING = os.getenv("STRING_SESSION", "")
 
 if not API_ID or not API_HASH or not STRING:
     print("Missing required credentials")
     exit()
-
-API_ID = int(API_ID)
 
 try:
     from webserver import start_webserver
@@ -50,9 +48,8 @@ def load_plugins():
         for f in os.listdir(folder):
             if f.endswith(".py") and f != "__init__.py":
                 name = f[:-3]
-                module_path = f"{folder.replace('/', '.')}.{name}"
                 try:
-                    module = importlib.import_module(module_path)
+                    module = importlib.import_module(f"{folder.replace('/', '.')}.{name}")
                     loaded_plugins[name] = module
                     if hasattr(module, "register"):
                         module.register(bot)
@@ -60,6 +57,7 @@ def load_plugins():
                 except Exception as e:
                     print("Plugin error:", name, e)
     return count
+
 
 async def start_bot():
     print("══════════════════════")
@@ -73,11 +71,18 @@ async def start_bot():
     bot.MODE = os.getenv("MODE", "PUBLIC").upper()
 
     @bot.on(events.NewMessage)
-    async def global_mode_block(event):
+    async def mode_block(event):
         if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
             return
 
     total = load_plugins()
+
+    for module in loaded_plugins.values():
+        if hasattr(module, "on_startup"):
+            try:
+                await module.on_startup(bot)
+            except:
+                pass
 
     print("🆔 API ID:", API_ID)
     print("👑 Owner:", bot.owner_id)
@@ -87,8 +92,8 @@ async def start_bot():
     print("🟢 BOT ONLINE & RUNNING")
     print("══════════════════════")
 
-    # Prevent Render timeout
     while True:
         await bot.run_until_disconnected()
+
 
 bot.loop.run_until_complete(start_bot())
