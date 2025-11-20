@@ -1,7 +1,7 @@
 # X-OPTIMUS TG BOT
 
 <p align="center">
-  <img src="assets/list.jpg" alt="X-OPTIMUS TG BOT Menu" width="600">
+  <img src="assets/readme.jpg" alt="X-OPTIMUS TG BOT Menu" width="600">
 </p>
 
 A feature-rich Telegram automation bot developed in Python, offering extensive management capabilities and seamless integration.
