@@ -4,23 +4,35 @@ import json
 import os
 
 REMOTE_VERSION_URL = "https://raw.githubusercontent.com/COD-LUCAS/X-OPTIMUS/main/version.json"
-LOCAL_VERSION_FILE = "version.json"
+
+# Try multiple version.json paths
+LOCAL_PATHS = [
+    "version.json",
+    "./version.json",
+    "/home/container/version.json",
+    "container/version.json",
+    "container_data/version.json",
+]
 
 
 def get_local_version():
-    if not os.path.exists(LOCAL_VERSION_FILE):
-        return "0.0.0"
-    try:
-        with open(LOCAL_VERSION_FILE, "r") as f:
-            data = json.load(f)
-            return data.get("version", "0.0.0")
-    except:
-        return "0.0.0"
+    for path in LOCAL_PATHS:
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    return json.load(f).get("version", "0.0.0")
+            except:
+                return "0.0.0"
+    return "0.0.0"
 
 
 def get_remote_version():
     try:
-        r = requests.get(REMOTE_VERSION_URL, timeout=10)
+        r = requests.get(
+            REMOTE_VERSION_URL,
+            timeout=10,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
         data = r.json()
         return data.get("version"), data.get("changelog", [])
     except:
@@ -32,18 +44,21 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/checkupdate$"))
     async def check_update(event):
 
-        await event.reply("🔍 Checking for updates...")
+        msg = await event.reply("🔍 Checking for updates...")
 
         local = get_local_version()
         remote, changelog = get_remote_version()
 
         if not remote:
-            return await event.reply("❌ Could not fetch update info.")
+            return await msg.edit("❌ Could not fetch update info.")
 
         if local == remote:
-            return await event.reply(f"✔️ Your bot is Up-to-date!\n\n**Current Version:** `{local}`")
+            return await msg.edit(
+                f"✔️ **Your bot is Up-to-date!**\n\n"
+                f"**Current Version:** `{local}`"
+            )
 
-        msg = (
+        text = (
             "⚠️ **New Update Available!**\n\n"
             f"**Current Version:** `{local}`\n"
             f"**Latest Version:** `{remote}`\n\n"
@@ -52,10 +67,10 @@ def register(bot):
 
         if changelog:
             for c in changelog:
-                msg += f" - {c}\n"
+                text += f" - {c}\n"
         else:
-            msg += " - No changelog provided\n"
+            text += " - No changelog provided\n"
 
-        msg += "\nUse **/update** to install the update."
+        text += "\nUse **/update** to install the update."
 
-        await event.reply(msg)
+        await msg.edit(text)
