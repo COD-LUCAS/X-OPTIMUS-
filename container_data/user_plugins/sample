@@ -1,0 +1,17 @@
+from telethon import events
+
+def register(bot):
+
+    @bot.on(events.NewMessage(pattern=r"^/yourcmd(?:\s+(.*))?$"))
+    async def your_command(event):
+
+        # get text after command
+        query = event.pattern_match.group(1)
+
+        # if nothing provided
+        if not query:
+            return await event.reply("Usage:\n`/yourcmd something`")
+
+        # Your logic here
+        await event.reply(f"✅ You sent: {query}")
+        
