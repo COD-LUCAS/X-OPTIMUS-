@@ -4,45 +4,40 @@ import os
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/install(?:\s+(.+))?$"))
+    @bot.on(events.NewMessage(pattern=r"^/install(?:\s+(.*))?$"))
     async def install_plugin(event):
         url = event.pattern_match.group(1)
 
-        # If no URL given
+        # If user typed only /install
         if not url:
-            await event.reply(
-                "❗Usage:\n"
-                "`/install {raw_github_url}`\n\n"
-                "Example:\n"
-                "`/install https://gist.githubusercontent.com/abcd/raw/plugin.py`"
-            )
-            return
+            return await event.reply("Usage:\n`/install https://raw.githubusercontent.com/.../file.py`")
+
+        # Clean accidental spaces
+        url = url.strip()
+
+        # Validate URL
+        if not (url.startswith("http://") or url.startswith("https://")):
+            return await event.reply("❌ Invalid URL.\nURL must start with http:// or https://")
+
+        # Auto-detect plugin name
+        name = url.split("/")[-1].replace(".py", "")
+        if not name:
+            return await event.reply("❌ Could not detect plugin name.")
+
+        folder = "plugins/user_plugins"
+        os.makedirs(folder, exist_ok=True)
+        path = f"{folder}/{name}.py"
 
         try:
-            url = url.strip()
-
-            # Auto-detect plugin name
-            name = url.split("/")[-1].replace(".py", "")
-            if not name:
-                await event.reply("❌ Invalid plugin name.")
-                return
-
-            folder = "plugins/user_plugins"
-            os.makedirs(folder, exist_ok=True)
-
-            path = f"{folder}/{name}.py"
-
             await event.reply("⬇️ Downloading plugin...")
 
-            code = requests.get(url, timeout=20).text
+            response = requests.get(url, timeout=20)
+            code = response.text
 
             with open(path, "w", encoding="utf-8") as f:
                 f.write(code)
 
-            await event.reply(
-                f"✅ Plugin **{name}** installed!\n"
-                f"🔄 Reboot bot to activate."
-            )
+            await event.reply(f"✅ Plugin **{name}** installed successfully!\n🔄 Restart bot to apply changes.")
 
         except Exception as e:
             await event.reply(f"❌ Install Failed:\n`{e}`")
