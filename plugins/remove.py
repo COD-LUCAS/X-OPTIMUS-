@@ -5,26 +5,24 @@ USER_PLUGIN_DIR = "plugins/user_plugins"
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/remove (.+)$"))
+    @bot.on(events.NewMessage(pattern=r"^/remove(?:\s+(.+))?$"))
     async def remove_plugin(event):
-        name = event.pattern_match.group(1).strip()
+        name = event.pattern_match.group(1)
 
-        # Ensure folder exists
-        if not os.path.exists(USER_PLUGIN_DIR):
-            os.makedirs(USER_PLUGIN_DIR)
+        # If no plugin name → show usage
+        if not name:
+            await event.reply("❗Usage:\n`/remove {plugin_name}`\n\nTo remove installed plugins only.")
+            return
 
-        # Only allow deleting from user_plugins
+        name = name.strip()
         plugin_path = os.path.join(USER_PLUGIN_DIR, f"{name}.py")
 
-        # Check if file exists
-        if not os.path.isfile(plugin_path):
+        if not os.path.exists(plugin_path):
             await event.reply(
-                f"❌ Cannot delete `{name}`.\n"
-                f"Only plugins inside **plugins/user_plugins** can be removed."
+                f"❌ Cannot delete `{name}`.\nOnly plugins in `plugins/user_plugins` can be removed."
             )
             return
 
-        # Try deleting
         try:
             os.remove(plugin_path)
             await event.reply(f"✅ Plugin `{name}` removed.\nRestart bot to apply changes.")
