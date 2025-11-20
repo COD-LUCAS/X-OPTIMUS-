@@ -1,48 +1,42 @@
-from telethon import events
-import requests
-import os
-import importlib
+from aiogram import types
+import aiohttp
 
-USER_PLUGIN_DIR = "plugins/user_plugins"
+API_URL = "https://api.sparky.biz.id/api/downloader/igdl?url="
 
-def register(bot):
+def register(dp):
 
-    @bot.on(events.NewMessage(pattern=r"^/install (.+) (.+)$"))
-    async def install_plugin(event):
-        url = event.pattern_match.group(1).strip()
-        name = event.pattern_match.group(2).strip()
+    @dp.message_handler(commands=["insta"])
+    async def insta_cmd(msg: types.Message):
+        if len(msg.text.split()) < 2:
+            return await msg.reply("âŒ Send Instagram link.\nExample:\n`/insta https://instagram.com/...`")
 
-        if not name.endswith(".py"):
-            name = f"{name}.py"
-
-        if not os.path.exists(USER_PLUGIN_DIR):
-            os.makedirs(USER_PLUGIN_DIR)
-
-        save_path = os.path.join(USER_PLUGIN_DIR, name)
-
-        await event.reply("⏳ Downloading plugin...")
+        url = msg.text.split()[1]
+        status = await msg.reply("ðŸ“¥ Downloadingâ€¦")
 
         try:
-            response = requests.get(url, timeout=15)
-            response.raise_for_status()
-            code = response.text
+            async with aiohttp.ClientSession() as session:
+                async with session.get(API_URL + url) as r:
+                    data = await r.json()
 
-            with open(save_path, "w", encoding="utf-8") as f:
-                f.write(code)
+            if not data.get("status"):
+                return await status.edit_text("âŒ Invalid or unsupported Instagram link.")
 
-            # AUTO LOAD PLUGIN
-            module_path = f"plugins.user_plugins.{name[:-3]}"
+            count = 0
 
-            try:
-                module = importlib.import_module(module_path)
+            for item in data.get("data", []):
+                media_url = item.get("url")
 
-                if hasattr(module, "register"):
-                    module.register(bot)
+                if item.get("type") == "image":
+                    await msg.answer_photo(media_url)
+                else:
+                    await msg.answer_video(media_url)
 
-                await event.reply(f"✅ Plugin `{name}` installed & loaded successfully!")
+                count += 1
 
-            except Exception as e:
-                await event.reply(f"⚠️ Installed but failed to auto-load:\n`{e}`\nRestart bot!")
+            if count == 0:
+                await msg.reply("âš  No media found.")
+            else:
+                await msg.reply(f"âœ… Sent {count} file(s).")
 
         except Exception as e:
-            await event.reply(f"❌ Install failed:\n`{e}`")
+            await status.edit_text(f"âš  Error: {str(e)}")
