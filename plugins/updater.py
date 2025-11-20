@@ -7,19 +7,12 @@ from telethon import events
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
 
 SAFE_DIRS = [
-    "plugins/user_plugins",
-]
-
-SAFE_FILES = [
-    "container_data/config.env",
+    "container_data",
 ]
 
 def is_safe(path):
     for s in SAFE_DIRS:
         if path == s or path.startswith(s + "/"):
-            return True
-    for f in SAFE_FILES:
-        if path == f:
             return True
     return False
 
@@ -30,7 +23,6 @@ def register(bot):
 
         msg = await event.reply("⬇️ Downloading update...")
 
-        # Download ZIP
         try:
             if os.path.exists("update_temp"):
                 shutil.rmtree("update_temp")
@@ -38,54 +30,43 @@ def register(bot):
 
             data = requests.get(ZIP_URL, timeout=20, verify=False).content
             open("update.zip", "wb").write(data)
-
         except Exception as e:
             return await msg.edit(f"❌ Download failed:\n`{e}`")
 
         await msg.edit("📦 Extracting update...")
 
-        # Extract ZIP
         try:
             with zipfile.ZipFile("update.zip") as z:
                 z.extractall("update_temp")
-
         except Exception as e:
-            return await msg.edit(f"❌ Extraction failed:\n`{e}`")
-
+            return await msg.edit(f"❌ Extract failed:\n`{e}`")
         finally:
             if os.path.exists("update.zip"):
                 os.remove("update.zip")
 
-        # Detect extracted folder
-        root_dir = os.listdir("update_temp")[0]
-        extracted = os.path.join("update_temp", root_dir)
+        extracted_root = os.listdir("update_temp")[0]
+        extracted = os.path.join("update_temp", extracted_root)
 
-        # If repo contains X-OPTIMUS folder inside it
-        if os.path.exists(os.path.join(extracted, "X-OPTIMUS")):
+        if os.path.isdir(os.path.join(extracted, "X-OPTIMUS")):
             extracted = os.path.join(extracted, "X-OPTIMUS")
 
-        await msg.edit("♻️ Updating bot...")
+        await msg.edit("♻️ Updating files...")
 
         try:
-            # Remove old files EXCEPT SAFE
             for item in os.listdir("."):
-
-                if item in ("update_temp", ".git", ".cache"):
+                if item == "update_temp":
+                    continue
+                if is_safe(item):
+                    continue
+                if item.startswith(".git"):
                     continue
 
-                path = item
-
-                if is_safe(path):
-                    continue
-
-                if os.path.isfile(path):
-                    os.remove(path)
+                if os.path.isfile(item):
+                    os.remove(item)
                 else:
-                    shutil.rmtree(path)
+                    shutil.rmtree(item)
 
-            # Copy new files EXCEPT SAFE
             for item in os.listdir(extracted):
-
                 src = os.path.join(extracted, item)
                 dst = item
 
@@ -100,7 +81,5 @@ def register(bot):
         except Exception as e:
             return await msg.edit(f"❌ Update failed:\n`{e}`")
 
-        finally:
-            shutil.rmtree("update_temp", ignore_errors=True)
-
-        await msg.edit("✅ Update completed!\nRestart with **/reboot**")
+        shutil.rmtree("update_temp", ignore_errors=True)
+        await msg.edit("✅ Update successful! Use /reboot")
