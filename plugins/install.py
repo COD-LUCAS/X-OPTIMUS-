@@ -1,43 +1,35 @@
-from telethon import events
-import requests
 import os
+import requests
+from telethon import events
+
+SAVE_DIR = "container_data/user_plugins"
+
+if not os.path.exists(SAVE_DIR):
+    os.makedirs(SAVE_DIR, exist_ok=True)
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/install(?:\s+(.*))?$"))
+    @bot.on(events.NewMessage(pattern=r"^/install\s+(.+)"))
     async def install_plugin(event):
         url = event.pattern_match.group(1)
 
-        # If user typed only /install
-        if not url:
-            return await event.reply("Usage:\n`/install https://raw.githubusercontent.com/.../file.py`")
-
-        # Clean accidental spaces
-        url = url.strip()
-
-        # Validate URL
-        if not (url.startswith("http://") or url.startswith("https://")):
-            return await event.reply("❌ Invalid URL.\nURL must start with http:// or https://")
-
-        # Auto-detect plugin name
-        name = url.split("/")[-1].replace(".py", "")
-        if not name:
-            return await event.reply("❌ Could not detect plugin name.")
-
-        folder = "plugins/user_plugins"
-        os.makedirs(folder, exist_ok=True)
-        path = f"{folder}/{name}.py"
+        msg = await event.reply("⬇️ Downloading plugin...")
 
         try:
-            await event.reply("⬇️ Downloading plugin...")
+            code = requests.get(url, timeout=20).text
+        except:
+            return await msg.edit("❌ Failed to download plugin.")
 
-            response = requests.get(url, timeout=20)
-            code = response.text
+        name = url.split("/")[-1].replace(".py", "")
 
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(code)
+        file_path = f"{SAVE_DIR}/{name}.py"
 
-            await event.reply(f"✅ Plugin **{name}** installed successfully!\n🔄 Restart bot to apply changes.")
-
+        try:
+            open(file_path, "w", encoding="utf-8").write(code)
         except Exception as e:
-            await event.reply(f"❌ Install Failed:\n`{e}`")
+            return await msg.edit(f"❌ Write error:\n`{e}`")
+
+        await msg.edit(
+            f"✅ Plugin **{name}** installed successfully!\n"
+            f"🔄 Restart bot using `/reboot`"
+        )
