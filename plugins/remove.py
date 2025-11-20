@@ -25,6 +25,6 @@ def register(bot):
 
         try:
             os.remove(plugin_path)
-            await event.reply(f"✅ Plugin `{name}` removed.\nRestart bot to apply changes.")
+            await event.reply(f"✅ Plugin `{name}` removed.\nReboot bot to apply changes.")
         except Exception as e:
             await event.reply(f"❌ Error removing plugin:\n`{e}`")
