@@ -1,70 +1,57 @@
 import os
 from telethon import events
 
-MENU_IMAGE = "assets/menu.jpg"
-
-CORE_COMMANDS = [
-    ("menu", "Show available commands"),
-    ("alive", "Check bot status"),
-    ("checkupdate", "Check for updates"),
-    ("update", "Update the bot"),
-    ("ping", "Check bot latency"),
-    ("mode", "Change bot mode"),
-    ("install", "Install plugins"),
-    ("reboot", "Restart the bot")
-]
-
-EXCLUDE = [
-    "menu.py", "alive.py", "updater.py", "ping.py",
-    "mode.py", "install.py", "__init__.py",
-    "auto_update_notify.py", "startup.py", "reboot.py",
-    "sudo.py", "checkupdate.py", "update.py"
-]
-
-def scan_folder(folder):
-    lst = []
-    if os.path.exists(folder):
-        for f in os.listdir(folder):
-            if f.endswith(".py") and f not in EXCLUDE:
-                lst.append(f[:-3])
-    return lst
-
-def get_installed_plugins():
-    p1 = scan_folder("plugins")
-    p2 = scan_folder("plugins/user_plugins")
-    final = sorted(set(p1 + p2))
-    return final
-
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/menu$"))
+    @bot.on(events.NewMessage(pattern="^/menu$"))
     async def menu(event):
 
-        installed = get_installed_plugins()
+        base_commands = {
+            "/menu": "Show available commands",
+            "/alive": "Check bot status",
+            "/checkupdate": "Check for updates",
+            "/update": "Update the bot",
+            "/ping": "Check bot latency",
+            "/mode": "Change bot mode",
+            "/install": "Install plugins",
+            "/reboot": "Restart the bot"
+        }
 
-        core = "**Basic Commands**\n"
-        for cmd, desc in CORE_COMMANDS:
-            core += f"/{cmd} - {desc}\n"
+        built_in_plugins = {
+            "add": "Add users to group",
+            "broadcast": "Broadcast messages to IDs",
+            "id": "Get user ID info",
+            "insta": "Instagram downloader",
+            "mp3": "YouTube to MP3",
+            "remove": "Remove installed plugins",
+            "yt": "YouTube downloader",
+            "checkupdate": "Check bot updates"
+        }
 
-        if installed:
-            plug = "\n**Installed Plugins**\n"
-            for p in installed:
-                plug += f"/{p}\n"
+        hidden_files = ["updater_notify.py", "startup.py"]
+        user_plugin_dir = "./X-OPTIMUS/plugins/user_plugins"
+        installed_plugins = []
+
+        if os.path.exists(user_plugin_dir):
+            for f in os.listdir(user_plugin_dir):
+                if f.endswith(".py") and f not in hidden_files:
+                    installed_plugins.append(f.replace(".py", ""))
+
+        txt = "✦ **X-OPTIMUS COMMAND MENU** ✦\n\n"
+
+        txt += "🌐 **Basic Commands**\n\n"
+        for cmd, desc in base_commands.items():
+            txt += f"➤ `{cmd}` — {desc}\n"
+
+        txt += "\n🔧 **OTHERS**\n\n"
+        for name, desc in built_in_plugins.items():
+            txt += f"• `{name}` — {desc}\n"
+
+        txt += "\n📦 **INSTALLED PLUGINS**\n\n"
+        if installed_plugins:
+            for p in installed_plugins:
+                txt += f"• `{p}`\n"
         else:
-            plug = ""
+            txt += "No plugins installed.\n"
 
-        text = f"""**Available Commands:**
-__________________________________
-
-{core}{plug}
-__________________________________"""
-
-        try:
-            await event.react("📋")
-        except:
-            pass
-
-        if os.path.exists(MENU_IMAGE):
-            await event.reply(file=MENU_IMAGE, message=text)
-        else:
-            await event.reply(text)
+        await event.reply(txt)
