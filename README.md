@@ -41,6 +41,13 @@ Generate your session string using our secure tool:
 
 ---
 
+## HOW TO DEPLOY
+
+___
+
+[![Watch Tutorial](https://img.shields.io/badge/YouTube-Watch%20Tutorial-red?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/P27P7LUQGpU)
+___
+
 ## 🚀 DEPLOYMENT OPTIONS
 
 Choose your preferred platform and deploy in minutes!
