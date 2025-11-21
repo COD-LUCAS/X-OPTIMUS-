@@ -21,13 +21,13 @@ def register(bot):
             "/setvar": "set variable in your bot",
             "/delvar": "delete variable",
             "/id": "Get user ID info",
-            "/uptime": "shows real uptime stats of the bot"
+            "/uptime": "shows real uptime stats"
         }
 
         built_in_plugins = {
             "insta": "Instagram downloader",
             "mp3": "To MP3",
-            "yta": "download song or audio in yt",
+            "yta": "youtube audio downloader",
             "yt": "YouTube downloader",
            "rbg": "remove background of photo",
             "img": "download images",
