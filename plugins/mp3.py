@@ -1,5 +1,6 @@
 import requests
 from telethon import events
+from io import BytesIO
 
 API = "https://api-aswin-sparky.koyeb.app/api/downloader/song?search="
 
@@ -12,7 +13,6 @@ def register(bot):
         msg = await event.reply("🎧 Fetching audio…")
 
         try:
-            # Get audio metadata
             r = requests.get(API + query, timeout=20).json()
 
             if not r.get("status") or "data" not in r:
@@ -25,16 +25,18 @@ def register(bot):
             if not audio_url:
                 return await msg.edit("❌ No audio URL found.")
 
-            await msg.edit("⚡ Processing…")
+            await msg.edit("⬇️ Downloading audio…")
 
-            # STREAM DIRECTLY (no file write!)
-            stream = requests.get(audio_url, stream=True, timeout=60)
-            stream.raise_for_status()
+            # Download FAST into memory
+            dl = requests.get(audio_url, timeout=50)
+            dl.raise_for_status()
+
+            audio_bytes = BytesIO(dl.content)
+            audio_bytes.name = f"{title}.mp3"
 
             await bot.send_file(
                 event.chat_id,
-                stream.raw,   # direct stream to telegram
-                file_name=f"{title}.mp3",
+                audio_bytes,
                 caption=f"🎵 **{title}**",
                 force_document=False
             )
