@@ -11,16 +11,16 @@ def register(bot):
             "/alive": "Check bot status",
             "/checkupdate": "Check for updates",
             "/update": "Update the bot",
-            "checkupdate": "Check bot updates",
+            "/checkupdate": "Check bot updates",
             "/ping": "Check bot latency",
             "/mode": "Change bot mode",
             "/install": "Install plugins",
-            "remove": "Remove installed plugins",
+            "/remove": "Remove installed plugins",
             "/reboot": "Restart the bot",
             "/info": "Get info of the bot",
-            "setvar": "set variable in your bot",
-            "delvar": "delete variable",
-            "id": "Get user ID info"
+            "/setvar": "set variable in your bot",
+            "/delvar": "delete variable",
+            "/id": "Get user ID info"
         }
 
         built_in_plugins = {
