@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+# ------------------------
+# LOAD CONFIG
+# ------------------------
 CONFIGS = [
     "container_data/config.env",
     "/home/container/container_data/config.env",
@@ -19,7 +22,7 @@ for c in CONFIGS:
         break
 
 if not loaded:
-    print("Missing config.env")
+    print("❌ Missing config.env")
     exit()
 
 API_ID = os.getenv("API_ID", "")
@@ -28,17 +31,29 @@ STRING = os.getenv("STRING_SESSION", "")
 OWNER = os.getenv("OWNER", "")
 
 if not API_ID or not API_HASH or not STRING:
-    print("Missing API_ID/API_HASH/STRING_SESSION")
+    print("❌ Missing API_ID / API_HASH / STRING_SESSION")
     exit()
 
 API_ID = int(API_ID)
 
-from webserver import start_webserver
-start_webserver()
+# ------------------------
+# START WEBSERVER
+# ------------------------
+try:
+    from webserver import start_webserver
+    start_webserver()
+except:
+    pass
 
+# ------------------------
+# START CLIENT
+# ------------------------
 bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
 plugins = {}
 
+# ------------------------
+# LOAD PLUGINS
+# ------------------------
 def load_plugins():
     count = 0
     paths = ["plugins", "container_data/user_plugins"]
@@ -46,7 +61,7 @@ def load_plugins():
     for folder in paths:
         if not os.path.exists(folder):
             continue
-
+        
         for f in os.listdir(folder):
             if f.endswith(".py") and f != "__init__.py":
                 name = f[:-3]
@@ -59,11 +74,16 @@ def load_plugins():
                         module.register(bot)
                     count += 1
                 except Exception as e:
-                    print(f"Plugin error in {name}: {e}")
+                    print(f"❌ Plugin error in {name}: {e}")
 
     return count
 
+# ------------------------
+# START BOT
+# ------------------------
 async def start_bot():
+    global OWNER  # allowed
+
     print("══════════════════════")
     print("🚀 X-OPTIMUS STARTING")
     print("══════════════════════")
@@ -77,9 +97,8 @@ async def start_bot():
     print("══════════════════════")
 
     await bot.start()
-
     me = await bot.get_me()
-    global OWNER
+
     if not OWNER:
         OWNER = str(me.id)
 
@@ -87,8 +106,8 @@ async def start_bot():
         if hasattr(m, "on_startup"):
             try:
                 await m.on_startup(bot)
-            except:
-                pass
+            except Exception as e:
+                print("Startup error:", e)
 
     print("🟢 BOT ONLINE & RUNNING")
     print("══════════════════════")
