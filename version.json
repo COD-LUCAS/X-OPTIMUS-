@@ -1,15 +1,15 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.7",
   "changelog": [
-    "🔧 Improved updater notifier with branding",
-    "⚡ Superfast MP3 downloader (direct streaming)",
-    "📥 Added SYT YouTube audio downloader",
-    "📌 Owner-only protection for install/remove/update/reboot/mode",
-    "🖼️ Added image generator using API + setvar support",
-    "📦 Improved plugin loader & stability",
-    "📊 Added clean /info command",
-    "🛡️ Auto-detect owner ID in bot startup",
-    "🚀 Faster Insta downloader",
-    "🔔 Update notifier every 2 minutes"
+    "⚡ Fixed MP3 plugin (100% working, fast BytesIO mode)",
+    "🎧 Improved audio downloader stability",
+    "🖼 Added Uptime image support + fancy UI",
+    "🕒 Added Real uptime tracking in main.py",
+    "📌 Enhanced /info with version + GitHub link",
+    "🔧 Updated update-notifier with branding",
+    "🔒 Owner-only control for /update, /install, /remove, /mode",
+    "📦 Improved plugin loader stability",
+    "🚀 Optimized main.py for Render + Panel",
+    "🛡 Prevented MP3 freeze & silent failures"
   ]
 }
