@@ -32,7 +32,8 @@ def register(bot):
            "rbg": "remove background of photo",
             "img": "download images",
             "pdf" : "make pages to pdf",
-            "genimg" : "generate images using AI"
+            "genimg" : "generate images using AI",
+            "url": "Uploads media to Catbox"
             
         }
 
