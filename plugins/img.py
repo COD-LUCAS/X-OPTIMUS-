@@ -1,19 +1,13 @@
 import requests
 from telethon import events
 
-def google_search(query):
-    url = "https://api.duckduckgo.com/?q={}&iax=images&ia=images".format(query)
+API = "https://gurubotapi.vercel.app/googleimg?search="
+
+def get_images(query):
     try:
-        data = requests.get(url, timeout=10).json()
-        results = []
-
-        if "image_results" in data:
-            for x in data["image_results"]:
-                img = x.get("image", {}).get("url")
-                if img:
-                    results.append(img)
-
-        return results
+        r = requests.get(API + query, timeout=10)
+        data = r.json()
+        return data.get("results", [])
     except:
         return []
 
@@ -22,36 +16,37 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/img ?(.*)"))
     async def img_search(event):
-        q = event.pattern_match.group(1).strip()
+        text = event.pattern_match.group(1).strip()
 
-        if not q:
+        if not text:
             return await event.reply("Example:\n`/img cat`\n`/img 5 car`")
 
+        # Default limit = 3
         limit = 3
-        parts = q.split()
+        parts = text.split()
 
         if parts[0].isdigit():
             limit = int(parts[0])
-            q = " ".join(parts[1:])
+            text = " ".join(parts[1:])
 
-        if not q:
-            return await event.reply("❌ Provide a search term.")
+        if not text:
+            return await event.reply("❌ Provide a valid search term.")
 
-        status = await event.reply(f"🔍 Searching images for **{q}**...")
+        msg = await event.reply(f"🔍 Searching **{text}**...")
 
-        images = google_search(q)
+        images = get_images(text)
 
         if not images:
-            return await status.edit("❌ No images found.")
+            return await msg.edit("❌ No images found for that query.")
 
         limit = min(limit, len(images))
 
-        await status.edit(f"📥 Downloading **{limit} images** for **{q}**...")
+        await msg.edit(f"📥 Sending **{limit} images** for **{text}**...")
 
         for i in range(limit):
             try:
-                await bot.send_file(event.chat_id, images[i], caption=f"Image {i+1}/{limit} • {q}")
+                await bot.send_file(event.chat_id, images[i], caption=f"{text} • {i+1}/{limit}")
             except:
                 pass
 
-        await status.delete()
+        await msg.delete()
