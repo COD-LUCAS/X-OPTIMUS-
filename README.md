@@ -95,51 +95,75 @@ Choose your preferred platform and deploy in minutes!
    API_ID=your_api_id
    API_HASH=your_api_hash
    SESSION_STRING=your_session_string
-Launch - Start the bot from your control panel
-Updates - Use /update command for version upgrades
-🔧 Note: Manual updates required using /update command
-🟢 KEEP YOUR BOT ONLINE 24/7
+-Launch - Start the bot from your control panel
+-Updates - Use /update command for version upgrades
+-🔧 Note: **Manual** updates required using **/update** command
+
+
+## 🟢 KEEP YOUR BOT ONLINE 24/7
+
 Render's free plan sleeps after 15 minutes of inactivity. Here's how to keep it awake:
-✅ Step 1: Verify Web Server
+
+### ✅ Step 1: Verify Web Server
 Ensure your bot runs a web server and has a Render URL like:
 https://your-bot-name.onrender.com
-✅ Step 2: Create UptimeRobot Account
-Visit uptimerobot.com and sign up
-✅ Step 3: Add Monitor
-Click Add New Monitor and configure:
-Field
-Value
-Monitor Type
-HTTP(s)
-Friendly Name
-Your Bot Name
-URL
-https://your-render-url.onrender.com/
-Monitoring Interval
-Every 5 minutes
-Status
-Enabled ✓
-How it works: UptimeRobot pings your bot every 5 minutes → Render sees activity → Bot stays awake 24/7! 🎉
-🏆 DEVELOPER
-�
-Created with ❤️ by Lucas 
+### ✅ Step 2: Create UptimeRobot Account
+Visit [uptimerobot.com](https://uptimerobot.com/) and sign up
 
+### ✅ Step 3: Add Monitor
+Click **Add New Monitor** and configure:
 
-�
-￼ ￼ 
+| Field | Value |
+|-------|-------|
+| **Monitor Type** | HTTP(s) |
+| **Friendly Name** | Your Bot Name |
+| **URL** | `https://your-render-url.onrender.com/` |
+| **Monitoring Interval** | Every 5 minutes |
+| **Status** | Enabled ✓ |
 
+**How it works:** UptimeRobot pings your bot every 5 minutes → Render sees activity → Bot stays awake 24/7! 🎉
 
-💬 SUPPORT & COMMUNITY
+---
+
+## 🏆 DEVELOPER
+
+<p align="center">
+  <strong>Created with ❤️ by Lucas</strong>
+</p>
+
+<p align="center">
+  <a href="https://t.me/codlucas">
+    <img src="https://img.shields.io/badge/Telegram-@codlucas-0088CC?style=for-the-badge&logo=telegram" alt="Telegram">
+  </a>
+  <a href="https://github.com/COD-LUCAS">
+    <img src="https://img.shields.io/badge/GitHub-COD--LUCAS-181717?style=for-the-badge&logo=github" alt="GitHub">
+  </a>
+</p>
+
+---
+
+## 💬 SUPPORT & COMMUNITY
+
 Need help or have suggestions?
-💡 Telegram Support: @codlucas
-📚 Documentation: GitHub Repository
-🐛 Report Issues: Issue Tracker
-⚠️ IMPORTANT ARCHITECTURE NOTICE
-Interconnected File Structure
-This project uses a synchronized architecture where all components update together. The only file safe to modify locally is:
-config_data/config.env ← Your configuration file
-⚡ Important: Custom changes to other files will be overwritten during updates. All modifications should be made through the configuration file or by forking the repository.
-�
-Built with Python • Powered by Telegram • Made with passion 
 
-```
+- 💡 **Telegram Support:** [@codlucas](https://t.me/codlucas)
+- 📚 **Documentation:** [GitHub Repository](https://github.com/COD-LUCAS)
+- 🐛 **Report Issues:** [Issue Tracker](https://github.com/COD-LUCAS/issues)
+
+---
+
+## ⚠️ IMPORTANT ARCHITECTURE NOTICE
+
+> **Interconnected File Structure**
+> 
+> This project uses a synchronized architecture where all components update together. The only file safe to modify locally is:
+> 
+> **`config_data/config.env`** ← Your configuration file
+> 
+> **⚡ Important:** Custom changes to other files will be overwritten during updates. All modifications should be made through the configuration file or by forking the repository.
+
+---
+
+<p align="center">
+  <sub>Built with Python • Powered by Telegram • Made with passion</sub>
+</p>
