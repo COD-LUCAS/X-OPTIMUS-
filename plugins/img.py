@@ -1,61 +1,42 @@
 import requests
-from bs4 import BeautifulSoup
 from telethon import events
-
-def google_images(query, limit=5):
-    url = f"https://www.google.com/search?q={query}&tbm=isch"
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    html = requests.get(url, headers=headers).text
-    soup = BeautifulSoup(html, "html.parser")
-
-    images = []
-    for img in soup.find_all("img"):
-        src = img.get("src")
-        if src and src.startswith("http"):
-            images.append(src)
-
-        if len(images) >= limit:
-            break
-
-    return images
-
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/img(?:\s+(.*))?$"))
-    async def google_img(event):
+    async def img(event):
+        query = event.pattern_match.group(1)
 
-        text = event.pattern_match.group(1)
-
-        if not text:
-            return await event.reply("❌ Usage: `/img cat`\nOr `/img 5 car`")
-
-        parts = text.split()
-        if parts[0].isdigit():
-            limit = int(parts[0])
-            query = " ".join(parts[1:])
-        else:
-            limit = 3
-            query = text
-
-        loading = await event.reply(f"🔍 Searching `{query}`…")
+        # Simple loading message
+        msg = await event.reply("📸 Fetching image...")
 
         try:
-            results = google_images(query, limit)
+            # RANDOM IMAGE URL (No API, works always)
+            img_url = "https://picsum.photos/800/600"
 
-            if not results:
-                return await loading.edit("❌ No images found.")
+            # If user gives keyword → use a static google photo search redirect
+            if query:
+                img_url = f"https://source.unsplash.com/800x600/?{query}"
 
-            await loading.edit(f"📸 Sending {len(results)} images…")
+            # Download image
+            r = requests.get(img_url, timeout=20)
 
-            for link in results:
-                try:
-                    await bot.send_file(event.chat_id, link)
-                except:
-                    pass
+            if r.status_code != 200:
+                return await msg.edit("❌ Unable to fetch image.")
+
+            # Save temp image
+            file = "random_img.jpg"
+            open(file, "wb").write(r.content)
+
+            # Send image
+            await bot.send_file(
+                event.chat_id,
+                file,
+                caption=f"🖼 **Image Result**\n🔍 Query: `{query or 'random'}`"
+            )
+
+            await msg.delete()
+            os.remove(file)
 
         except Exception as e:
-            await loading.edit(f"⚠ Error:\n`{e}`")a
+            await msg.edit(f"❌ Error:\n`{e}`")
