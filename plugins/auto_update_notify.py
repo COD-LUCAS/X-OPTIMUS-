@@ -21,8 +21,10 @@ def read_local_version():
 
 def read_remote_version():
     try:
-        r = requests.get(REMOTE_VERSION_URL, timeout=10).json()
-        return r.get("version", "0.0.0"), r.get("changelog", [])
+        r = requests.get(REMOTE_VERSION_URL, timeout=8)
+        r.raise_for_status()
+        data = r.json()
+        return data.get("version", "0.0.0"), data.get("changelog", [])
     except:
         return None, None
 
@@ -30,49 +32,48 @@ def read_remote_version():
 async def notify_update_loop(bot):
     while True:
         try:
-            local_version = read_local_version()
-            remote_version, changelog = read_remote_version()
+            local_ver = read_local_version()
+            remote_ver, changelog = read_remote_version()
 
-            if not remote_version:
+            if not remote_ver:
                 await asyncio.sleep(120)
                 continue
 
-            # Load previous checked version
             if os.path.exists(LAST_CHECK_FILE):
                 with open(LAST_CHECK_FILE, "r") as f:
                     last_notified = f.read().strip()
             else:
                 last_notified = "0.0.0"
 
-            # Send message only when remote != local AND remote != last_notified
-            if remote_version != local_version and remote_version != last_notified:
+            if remote_ver != local_ver and remote_ver != last_notified:
 
                 text = (
-                    "**⚠️ X-OPTIMUS NEW UPDATE IS THERE!**\n\n"
-                    f"**CURRENT VERSION:** `{local_version}`\n"
-                    f"**LATEST VERSION:** `{remote_version}`\n\n"
-                    "**CHANGE LOG:**\n"
+                    "✦ **X-OPTIMUS UPDATE NOTIFIER** ✦\n"
+                    "**by @codlucas**\n"
+                    "──────────────────────────\n\n"
+                    "**⚠️ New Update Available!**\n\n"
+                    f"🔻 **Current Version:** `{local_ver}`\n"
+                    f"🔺 **Latest Version:** `{remote_ver}`\n\n"
+                    "**📌 Changelog:**\n"
                 )
 
                 if changelog:
-                    for item in changelog:
-                        text += f" - {item}\n"
+                    for line in changelog:
+                        text += f"• {line}\n"
                 else:
-                    text += " - No changelog provided\n"
+                    text += "• No changelog provided\n"
 
-                text += "\nUse **/update** to install the update."
+                text += "\nUse **/update** to install this update."
 
-                # SEND TO SAVED MESSAGES
                 await bot.send_message("me", text)
 
-                # Save last notified version
                 with open(LAST_CHECK_FILE, "w") as f:
-                    f.write(remote_version)
+                    f.write(remote_ver)
 
         except Exception as e:
-            print(f"[update_notify] Error: {e}")
+            print(f"[update_notifier] Error: {e}")
 
-        await asyncio.sleep(120)  # check every 2 minutes
+        await asyncio.sleep(120)
 
 
 def register(bot):
