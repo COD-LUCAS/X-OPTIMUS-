@@ -3,35 +3,33 @@ from telethon import events
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/img\s+(.+)"))
+    @bot.on(events.NewMessage(pattern=r"^/img\s*(.*)"))
     async def img_search(event):
         query = event.pattern_match.group(1).strip()
 
         if not query:
-            return await event.reply("❌ Usage: `/img cat`")
+            return await event.reply(
+                "❌ **Usage:**\n`/img <search term>`\n\nExample:\n/img cat"
+            )
 
-        await event.reply(f"🔍 Searching images for **{query}** ...")
+        msg = await event.reply(f"🔍 Searching images for **{query}** ...")
 
         try:
-            url = f"https://bing-image-search-api.vercel.app/api?q={query}"
-            r = requests.get(url, timeout=8)
+            api = f"https://duckduckgo-image-api.vercel.app/search?query={query}"
+            res = requests.get(api, timeout=10).json()
 
-            if r.status_code != 200:
-                return await event.reply("❌ Error fetching images.")
+            if not res or "results" not in res or len(res["results"]) == 0:
+                return await msg.edit("❌ No images found.")
 
-            data = r.json()
-
-            if "results" not in data or len(data["results"]) == 0:
-                return await event.reply("❌ No images found.")
-
-            count = 3
-            results = data["results"][:count]
+            results = res["results"][:3]  # Send top 3 images
 
             for img in results:
                 try:
-                    await bot.send_file(event.chat_id, img["url"], caption=f"Image for: {query}")
+                    await bot.send_file(event.chat_id, img["image"], caption=f"Image: {query}")
                 except:
                     pass
 
+            await msg.delete()
+
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await msg.edit(f"❌ Error: {str(e)}")
