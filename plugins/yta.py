@@ -9,36 +9,44 @@ def register(bot):
         query = event.pattern_match.group(1)
 
         if not query:
-            await event.reply("❌ Give YouTube link!)
+            await event.reply("❌ Give YouTube link!\nExample:\n`/yta https://youtu.be/xxxx`")
             return
 
-        await event.reply("⏳ Downloading audio...")
+        await event.reply("⏳ **Processing your audio...**")
 
         try:
+            # API call
             api = f"https://api-aswin-sparky.koyeb.app/api/downloader/song?search={query}"
             r = requests.get(api, timeout=20).json()
 
             if not r.get("status"):
-                await event.reply("❌ Unable to fetch audio.")
+                await event.reply("❌ Unable to fetch audio from API.")
                 return
 
+            # Extract details
             title = r["data"]["title"]
-            url = r["data"]["url"]
+            download_url = r["data"]["url"]
 
-            temp = f"yta_{event.sender_id}.mp3"
+            # Temp filename
+            temp_file = f"yta_{event.sender_id}.mp3"
 
-            audio = requests.get(url, stream=True)
-            with open(temp, "wb") as f:
-                for chunk in audio.iter_content(1024):
-                    f.write(chunk)
+            # Download audio file
+            audio = requests.get(download_url, stream=True)
+            with open(temp_file, "wb") as f:
+                for chunk in audio.iter_content(4096):
+                    if chunk:
+                        f.write(chunk)
 
+            # Send audio to user
             await bot.send_file(
                 event.chat_id,
-                temp,
-                caption=f"🎵 **{title}**"
+                temp_file,
+                caption=f"🎵 **{title}**\n\nDownloaded successfully ✔"
             )
 
-            os.remove(temp)
+            # Delete temp file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 
         except Exception as e:
-            await event.reply(f"❌ Error: {e}")
+            await event.reply(f"❌ Error occurred:\n`{str(e)}`")
