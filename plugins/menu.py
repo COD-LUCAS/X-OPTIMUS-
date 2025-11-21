@@ -24,7 +24,11 @@ def register(bot):
             "mp3": "YouTube to MP3",
             "remove": "Remove installed plugins",
             "yt": "YouTube downloader",
-            "checkupdate": "Check bot updates"
+            "checkupdate": "Check bot updates",
+            "setvar": "set variable in your bot",
+            "delvar": "delete variable",
+            "rmbg": "remove background of photo"
+            
         }
 
         hidden = ["updater_notify.py", "startup.py"]
