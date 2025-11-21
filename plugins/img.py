@@ -1,52 +1,37 @@
 import requests
 from telethon import events
 
-API = "https://gurubotapi.vercel.app/googleimg?search="
-
-def get_images(query):
-    try:
-        r = requests.get(API + query, timeout=10)
-        data = r.json()
-        return data.get("results", [])
-    except:
-        return []
-
-
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/img ?(.*)"))
+    @bot.on(events.NewMessage(pattern=r"^/img\s+(.+)"))
     async def img_search(event):
-        text = event.pattern_match.group(1).strip()
+        query = event.pattern_match.group(1).strip()
 
-        if not text:
-            return await event.reply("Example:\n`/img cat`\n`/img 5 car`")
+        if not query:
+            return await event.reply("❌ Usage: `/img cat`")
 
-        # Default limit = 3
-        limit = 3
-        parts = text.split()
+        await event.reply(f"🔍 Searching images for **{query}** ...")
 
-        if parts[0].isdigit():
-            limit = int(parts[0])
-            text = " ".join(parts[1:])
+        try:
+            url = f"https://bing-image-search-api.vercel.app/api?q={query}"
+            r = requests.get(url, timeout=8)
 
-        if not text:
-            return await event.reply("❌ Provide a valid search term.")
+            if r.status_code != 200:
+                return await event.reply("❌ Error fetching images.")
 
-        msg = await event.reply(f"🔍 Searching **{text}**...")
+            data = r.json()
 
-        images = get_images(text)
+            if "results" not in data or len(data["results"]) == 0:
+                return await event.reply("❌ No images found.")
 
-        if not images:
-            return await msg.edit("❌ No images found for that query.")
+            count = 3
+            results = data["results"][:count]
 
-        limit = min(limit, len(images))
+            for img in results:
+                try:
+                    await bot.send_file(event.chat_id, img["url"], caption=f"Image for: {query}")
+                except:
+                    pass
 
-        await msg.edit(f"📥 Sending **{limit} images** for **{text}**...")
-
-        for i in range(limit):
-            try:
-                await bot.send_file(event.chat_id, images[i], caption=f"{text} • {i+1}/{limit}")
-            except:
-                pass
-
-        await msg.delete()
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
