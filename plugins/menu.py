@@ -87,3 +87,4 @@ def register(bot):
             await bot.send_file(event.chat_id, image_path, caption=txt)
         else:
             await event.reply(txt)
+            
