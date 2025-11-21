@@ -96,7 +96,7 @@ Choose your preferred platform and deploy in minutes!
    API_HASH=your_api_hash
    SESSION_STRING=your_session_string
 -Launch - Start the bot from your control panel
--Updates - Use /update command for version upgrades
+
 -🔧 Note: **Manual** updates required using **/update** command
 
 
