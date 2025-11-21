@@ -11,6 +11,11 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/install\s+(.+)"))
     async def install_plugin(event):
+
+        # OWNER CHECK
+        if event.sender_id != bot.owner_id:
+            return await event.reply("❌ Only owner can install plugins.")
+
         url = event.pattern_match.group(1)
 
         msg = await event.reply("⬇️ Downloading plugin...")
