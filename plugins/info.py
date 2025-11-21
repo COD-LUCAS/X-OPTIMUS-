@@ -1,20 +1,34 @@
 import os
-from telethon import events
+import time
+import platform
+from telethon import events, version as telethon_version
+
+START_TIME = time.time()
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/info$"))
     async def info(event):
 
-        total = len(bot.list_event_handlers())
+        me = await bot.get_me()
+
+        owner = os.getenv("OWNER", "Unknown")
+        mode = os.getenv("MODE", "private")
+
+        uptime_seconds = int(time.time() - START_TIME)
+        uptime = f"{uptime_seconds//3600}h {(uptime_seconds%3600)//60}m"
 
         txt = (
             "✦ **X-OPTIMUS BOT INFORMATION** ✦\n\n"
-            f"🤖 **Bot User:** `{(await bot.get_me()).id}`\n"
-            f"👑 **Owner:** `{bot.owner_id}`\n"
-            f"🌐 **Mode:** `{bot.MODE}`\n"
-            f"📦 **Loaded Plugins:** `{len(bot.list_event_handlers())}`\n"
-            f"💻 **Platform:** `{os.name}`\n"
+            f"🤖 **Bot ID:** `{me.id}`\n"
+            f"👤 **Bot Name:** `{me.first_name}`\n"
+            f"👑 **Owner:** `{owner}`\n"
+            f"🛠 **Developer:** @codlucas\n"
+            f"🌐 **Mode:** `{mode}`\n"
+            f"📦 **Plugins Loaded:** `{len(bot.list_event_handlers())}`\n"
+            f"🕒 **Uptime:** `{uptime}`\n"
+            f"💻 **Platform:** `{platform.system()}`\n"
+            f"📡 **Telethon Version:** `{telethon_version.__version__}`\n"
         )
 
         img_path = "assets/info.jpg"
