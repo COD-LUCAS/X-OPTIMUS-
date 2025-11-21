@@ -20,7 +20,8 @@ def register(bot):
             "/info": "Get info of the bot",
             "/setvar": "set variable in your bot",
             "/delvar": "delete variable",
-            "/id": "Get user ID info"
+            "/id": "Get user ID info",
+            "/uptime": "shows real uptime stats of the bot"
         }
 
         built_in_plugins = {
