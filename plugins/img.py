@@ -1,46 +1,57 @@
 import requests
-import os
 from telethon import events
+
+def google_search(query):
+    url = "https://api.duckduckgo.com/?q={}&iax=images&ia=images".format(query)
+    try:
+        data = requests.get(url, timeout=10).json()
+        results = []
+
+        if "image_results" in data:
+            for x in data["image_results"]:
+                img = x.get("image", {}).get("url")
+                if img:
+                    results.append(img)
+
+        return results
+    except:
+        return []
+
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/img(?:\s+(.*))?$"))
-    async def img(event):
-        query = event.pattern_match.group(1)
+    @bot.on(events.NewMessage(pattern=r"^/img ?(.*)"))
+    async def img_search(event):
+        q = event.pattern_match.group(1).strip()
 
-        if not query:
-            return await event.reply(
-                "Please provide a search query.\nExample: `/img cat`"
-            )
+        if not q:
+            return await event.reply("Example:\n`/img cat`\n`/img 5 car`")
 
-        msg = await event.reply(f"🔍 Searching images for: **{query}** ...")
+        limit = 3
+        parts = q.split()
 
-        try:
-            url = "https://duckduckgo.com/"
-            token = requests.post(url, data={"q": query}).text.split("vqd=")[1].split("&")[0]
+        if parts[0].isdigit():
+            limit = int(parts[0])
+            q = " ".join(parts[1:])
 
-            api = (
-                "https://duckduckgo.com/i.js?l=us-en&o=json"
-                f"&q={query}&vqd={token}"
-            )
-            data = requests.get(api, headers={"User-Agent": "Mozilla/5.0"}).json()
+        if not q:
+            return await event.reply("❌ Provide a search term.")
 
-            results = data.get("results", [])[:4]
+        status = await event.reply(f"🔍 Searching images for **{q}**...")
 
-            if not results:
-                return await msg.edit("❌ No images found.")
+        images = google_search(q)
 
-            for item in results:
-                img_url = item["image"]
-                file = "img.jpg"
+        if not images:
+            return await status.edit("❌ No images found.")
 
-                r = requests.get(img_url, timeout=10)
-                open(file, "wb").write(r.content)
+        limit = min(limit, len(images))
 
-                await bot.send_file(event.chat_id, file, caption=f"Image for: {query}")
-                os.remove(file)
+        await status.edit(f"📥 Downloading **{limit} images** for **{q}**...")
 
-            await msg.delete()
+        for i in range(limit):
+            try:
+                await bot.send_file(event.chat_id, images[i], caption=f"Image {i+1}/{limit} • {q}")
+            except:
+                pass
 
-        except Exception as e:
-            await msg.edit(f"❌ Error: {str(e)}")
+        await status.delete()
