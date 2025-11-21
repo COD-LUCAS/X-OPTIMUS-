@@ -28,7 +28,7 @@ def register(bot):
             "insta": "Instagram downloader",
             "mp3": "To MP3",
             "yta": "youtube audio downloader",
-            "yt": "YouTube downloader",
+            "yt": "YouTube video downloader",
            "rbg": "remove background of photo",
             "img": "download images",
             "pdf" : "make pages to pdf",
