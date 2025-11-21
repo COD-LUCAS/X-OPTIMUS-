@@ -8,24 +8,21 @@ const isPrivateBot = config.MODE !== 'public';
 const activeDownloads = new Map();
 
 Module({
-    pattern: 'yta(?:\\s+(.*))?',
+    pattern: 'yta',
     fromMe: isPrivateBot,
     desc: 'Download YouTube audio',
     type: 'downloader',
     usage: 'yta <url or song name>'
 }, async (message, match) => {
 
-    const input = match[1] || message.text.split(" ").slice(1).join(" ");
+    // Works on all bots — takes text after command
+    const input = message.text.split(" ").slice(1).join(" ");
 
     if (!input) {
-        await message.client.sendMessage(message.jid, {
-            text: "❌ Please give a YouTube URL or song name."
-        });
-        return;
+        return await message.client.sendMessage(message.jid, { text: "❌ Give YouTube URL or song name." });
     }
 
     const downloadKey = `${message.jid}_${input}`;
-
     if (activeDownloads.has(downloadKey)) return;
     activeDownloads.set(downloadKey, true);
 
@@ -33,31 +30,24 @@ Module({
         react: { text: '⌛', key: message.data.key }
     });
 
-    let tempFilePath = null;
+    let temp = null;
 
     try {
         const API = `https://api-aswin-sparky.koyeb.app/api/downloader/song?search=${encodeURIComponent(input)}`;
+        const res = await axios.get(API);
 
-        const response = await axios.get(API, {
-            timeout: 30000,
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
+        const { title, url } = res.data.data;
 
-        const { title, url: downloadUrl } = response.data.data;
+        temp = `yta_${Date.now()}.mp3`;
 
-        tempFilePath = `./yta_${Date.now()}.mp3`;
+        const audio = await axios.get(url, { responseType: "stream" });
+        const file = fs.createWriteStream(temp);
+        audio.data.pipe(file);
 
-        const stream = await axios.get(downloadUrl, {
-            responseType: 'stream'
-        });
-
-        const file = fs.createWriteStream(tempFilePath);
-        stream.data.pipe(file);
-
-        await new Promise(res => file.on('finish', res));
+        await new Promise((res) => file.on("finish", res));
 
         await message.client.sendMessage(message.jid, {
-            audio: { stream: fs.createReadStream(tempFilePath) },
+            audio: { stream: fs.createReadStream(temp) },
             mimetype: 'audio/mp4',
             fileName: `${title}.mp3`
         });
@@ -66,16 +56,13 @@ Module({
             react: { text: '✅', key: message.data.key }
         });
 
-    } catch (err) {
-        console.log(err);
-
+    } catch (e) {
         await message.client.sendMessage(message.jid, {
             react: { text: '❌', key: message.data.key }
         });
 
     } finally {
         activeDownloads.delete(downloadKey);
-        if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+        if (temp && fs.existsSync(temp)) fs.unlinkSync(temp);
     }
-
 });
