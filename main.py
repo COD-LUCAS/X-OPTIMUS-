@@ -1,6 +1,7 @@
 import os
 import importlib
 import platform
+import time
 from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -26,16 +27,12 @@ API_ID = os.getenv("API_ID", "")
 API_HASH = os.getenv("API_HASH", "")
 STRING = os.getenv("STRING_SESSION", "")
 OWNER = os.getenv("OWNER", "")
-MODE = os.getenv("MODE", "PUBLIC").upper()
 
 if not API_ID or not API_HASH or not STRING:
     print("Missing API_ID/API_HASH/STRING_SESSION")
     exit()
 
 API_ID = int(API_ID)
-
-if OWNER:
-    OWNER = int(OWNER)
 
 try:
     from webserver import start_webserver
@@ -44,14 +41,11 @@ except:
     pass
 
 bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
-bot.MODE = MODE
-bot.owner_id = OWNER
 plugins = {}
 
 def load_plugins():
     count = 0
     paths = ["plugins", "container_data/user_plugins"]
-
     for folder in paths:
         if not os.path.exists(folder):
             continue
@@ -71,7 +65,6 @@ def load_plugins():
 
 async def start_bot():
     global OWNER
-
     print("══════════════════════")
     print("🚀 X-OPTIMUS STARTING")
     print("══════════════════════")
@@ -85,11 +78,17 @@ async def start_bot():
     print("══════════════════════")
 
     await bot.start()
-    me = await bot.get_me()
+    bot.START_TIME = time.time()
 
+    me = await bot.get_me()
     if not OWNER:
-        OWNER = me.id
-        bot.owner_id = OWNER
+        OWNER = str(me.id)
+    bot.owner_id = int(OWNER)
+
+    if os.path.exists("container_data/config.env"):
+        bot.MODE = os.getenv("MODE", "PUBLIC").upper()
+    else:
+        bot.MODE = "PUBLIC"
 
     for m in plugins.values():
         if hasattr(m, "on_startup"):
