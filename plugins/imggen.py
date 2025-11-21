@@ -4,7 +4,7 @@ from telethon import events
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/(gen|aiimg)(?:\s+(.*))?$"))
+    @bot.on(events.NewMessage(pattern=r"^/(genimg|aiimg)(?:\s+(.*))?$"))
     async def ai_generate(event):
         cmd = event.pattern_match.group(1)
         prompt = event.pattern_match.group(2)
