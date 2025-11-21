@@ -1,6 +1,8 @@
 import requests
 from telethon import events
 
+API = "https://lexica-q6kr.onrender.com/search?q="   # stable API
+
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/img\s*(.*)"))
@@ -9,23 +11,30 @@ def register(bot):
 
         if not query:
             return await event.reply(
-                "❌ **Usage:**\n`/img <search term>`\n\nExample:\n/img cat"
+                "❌ **Usage:** `/img <search term>`\nExample: `/img cat`"
             )
 
         msg = await event.reply(f"🔍 Searching images for **{query}** ...")
 
         try:
-            api = f"https://duckduckgo-image-api.vercel.app/search?query={query}"
-            res = requests.get(api, timeout=10).json()
+            r = requests.get(API + query, timeout=10)
 
-            if not res or "results" not in res or len(res["results"]) == 0:
+            if r.status_code != 200:
+                return await msg.edit("❌ API error. Try again later.")
+
+            try:
+                data = r.json()
+            except:
+                return await msg.edit("❌ Could not read images. (Invalid JSON)")
+
+            if not data or "images" not in data or len(data["images"]) == 0:
                 return await msg.edit("❌ No images found.")
 
-            results = res["results"][:3]  # Send top 3 images
+            results = data["images"][:3]  # top 3 images
 
             for img in results:
                 try:
-                    await bot.send_file(event.chat_id, img["image"], caption=f"Image: {query}")
+                    await bot.send_file(event.chat_id, img["src"], caption=query)
                 except:
                     pass
 
