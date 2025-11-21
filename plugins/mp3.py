@@ -1,34 +1,45 @@
+import requests
 from telethon import events
-import os
-import subprocess
+
+API = "https://api-aswin-sparky.koyeb.app/api/downloader/song?search="
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/mp3$"))
-    async def mp3_convert(event):
-        reply = await event.get_reply_message()
+    @bot.on(events.NewMessage(pattern=r"^/mp3 (.+)"))
+    async def yt_mp3(event):
+        query = event.pattern_match.group(1).strip()
 
-        if not reply:
-            return await event.reply("Reply to a video/audio/voice note.")
-
-        msg = await event.reply("🔄 Converting to MP3...")
+        msg = await event.reply("🎧 Fetching audio…")
 
         try:
-            downloaded = await bot.download_media(reply, file="input_media")
+            # Get audio metadata
+            r = requests.get(API + query, timeout=20).json()
 
-            output = "output.mp3"
+            if not r.get("status") or "data" not in r:
+                return await msg.edit("❌ Could not find audio.")
 
-            subprocess.run(
-                ["ffmpeg", "-i", downloaded, "-vn", "-ab", "192k", "-ar", "44100", "-y", output],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+            info = r["data"]
+            title = info.get("title", "audio")
+            audio_url = info.get("url")
+
+            if not audio_url:
+                return await msg.edit("❌ No audio URL found.")
+
+            await msg.edit("⚡ Processing…")
+
+            # STREAM DIRECTLY (no file write!)
+            stream = requests.get(audio_url, stream=True, timeout=60)
+            stream.raise_for_status()
+
+            await bot.send_file(
+                event.chat_id,
+                stream.raw,   # direct stream to telegram
+                file_name=f"{title}.mp3",
+                caption=f"🎵 **{title}**",
+                force_document=False
             )
 
-            await event.reply("🎵 MP3 Ready!", file=output)
             await msg.delete()
 
-            os.remove(downloaded)
-            os.remove(output)
-
         except Exception as e:
-            await msg.edit(f"❌ Conversion failed\n`{e}`")
+            await msg.edit(f"❌ Error:\n`{e}`")
