@@ -9,7 +9,7 @@ def register(bot):
         query = event.pattern_match.group(1)
 
         if not query:
-            await event.reply("❌ Give YouTube link or song name!")
+            await event.reply("❌ Give YouTube link!)
             return
 
         await event.reply("⏳ Downloading audio...")
