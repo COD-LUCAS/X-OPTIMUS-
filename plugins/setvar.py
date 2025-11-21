@@ -1,102 +1,70 @@
 import os
 from telethon import events
 
-CONFIG_PATHS = [
-    "container_data/config.env",
-    "/home/container/container_data/config.env",
-]
-
-def find_config():
-    for p in CONFIG_PATHS:
-        if os.path.exists(p):
-            return p
-    return None
-
-
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/(setvar|delvar)(.*)"))
-    async def env_handler(event):
-        sender = event.sender_id
-
-        # OWNER only
-        owner = os.getenv("OWNER")
-        if owner and str(sender) != owner:
+    @bot.on(events.NewMessage(pattern=r"^/setvar\s+(.+)"))
+    async def set_var(event):
+        if event.sender_id != bot.owner_id:
             return await event.reply("❌ Only owner can use this command.")
 
-        cmd = event.pattern_match.group(1)
-        args = event.pattern_match.group(2).strip()
+        data = event.pattern_match.group(1)
 
-        config = find_config()
-        if not config:
-            return await event.reply("❌ config.env not found.")
+        if "=" not in data:
+            return await event.reply("❌ Format: `/setvar KEY=value`")
 
-        # ---------------------------
-        #     SET VARIABLE
-        # ---------------------------
-        if cmd == "setvar":
+        key, value = data.split("=", 1)
+        key = key.strip()
+        value = value.strip()
 
-            if "=" not in args:
-                return await event.reply("❌ Invalid format.\nUse:\n`/setvar KEY=value`")
+        config_path = "container_data/config.env"
+        if not os.path.exists(config_path):
+            open(config_path, "w").close()
 
-            key, value = args.split("=", 1)
-            key = key.strip()
-            value = value.strip()
+        lines = []
+        found = False
 
-            # Read file
-            lines = []
-            if os.path.exists(config):
-                with open(config, "r") as f:
-                    lines = f.read().splitlines()
-
-            updated = False
-            new_lines = []
-
-            # Update if exists
-            for line in lines:
-                if line.startswith(f"{key}="):
-                    new_lines.append(f"{key}={value}")
-                    updated = True
+        with open(config_path, "r") as f:
+            for line in f:
+                if line.startswith(key + "="):
+                    lines.append(f"{key}={value}\n")
+                    found = True
                 else:
-                    new_lines.append(line)
+                    lines.append(line)
 
-            if not updated:
-                new_lines.append(f"{key}={value}")
+        if not found:
+            lines.append(f"{key}={value}\n")
 
-            # Write back
-            with open(config, "w") as f:
-                f.write("\n".join(new_lines))
+        with open(config_path, "w") as f:
+            f.writelines(lines)
 
-            return await event.reply(
-                f"✅ `{key}` updated successfully!\nRestart bot to apply."
-            )
+        await event.reply(f"✅ `{key}` updated successfully.\n🔄 Restart bot to apply changes.")
 
-        # ---------------------------
-        #     DELETE VARIABLE
-        # ---------------------------
-        if cmd == "delvar":
+    @bot.on(events.NewMessage(pattern=r"^/delvar\s+(.+)"))
+    async def del_var(event):
+        if event.sender_id != bot.owner_id:
+            return await event.reply("❌ Only owner can use this command.")
 
-            key = args.strip()
-            if not key:
-                return await event.reply("❌ Usage: `/delvar KEY`")
+        key = event.pattern_match.group(1).strip()
 
-            if not os.path.exists(config):
-                return await event.reply("❌ config.env missing.")
+        config_path = "container_data/config.env"
+        if not os.path.exists(config_path):
+            return await event.reply("❌ No config.env file found.")
 
-            new_lines = []
-            removed = False
+        lines = []
+        removed = False
 
-            with open(config, "r") as f:
-                for line in f:
-                    if line.startswith(f"{key}="):
-                        removed = True
-                    else:
-                        new_lines.append(line)
+        with open(config_path, "r") as f:
+            for line in f:
+                if line.startswith(key + "="):
+                    removed = True
+                    continue
+                lines.append(line)
 
-            with open(config, "w") as f:
-                f.write("\n".join(new_lines))
+        with open(config_path, "w") as f:
+            f.writelines(lines)
 
-            if removed:
-                return await event.reply(f"🗑️ `{key}` removed.\nRestart bot.")
-            else:
-                return await event.reply("❌ Key not found.")
+        if removed:
+            await event.reply(f"🗑 `{key}` removed.\n🔄 Restart bot to apply changes.")
+        else:
+            await event.reply("❌ Variable not found.")
