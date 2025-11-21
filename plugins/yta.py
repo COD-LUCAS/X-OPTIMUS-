@@ -1,68 +1,44 @@
-const { Module } = require('../main');
-const config = require('../config');
-const axios = require('axios');
-const fs = require('fs');
+import os
+import requests
+from telethon import events
 
-const isPrivateBot = config.MODE !== 'public';
+def register(bot):
 
-const activeDownloads = new Map();
+    @bot.on(events.NewMessage(pattern=r"^/yta(?:\s+(.*))?$"))
+    async def yta(event):
+        query = event.pattern_match.group(1)
 
-Module({
-    pattern: 'yta',
-    fromMe: isPrivateBot,
-    desc: 'Download YouTube audio',
-    type: 'downloader',
-    usage: 'yta <url or song name>'
-}, async (message, match) => {
+        if not query:
+            await event.reply("❌ Give YouTube link or song name!")
+            return
 
-    // Works on all bots — takes text after command
-    const input = message.text.split(" ").slice(1).join(" ");
+        await event.reply("⏳ Downloading audio...")
 
-    if (!input) {
-        return await message.client.sendMessage(message.jid, { text: "❌ Give YouTube URL or song name." });
-    }
+        try:
+            api = f"https://api-aswin-sparky.koyeb.app/api/downloader/song?search={query}"
+            r = requests.get(api, timeout=20).json()
 
-    const downloadKey = `${message.jid}_${input}`;
-    if (activeDownloads.has(downloadKey)) return;
-    activeDownloads.set(downloadKey, true);
+            if not r.get("status"):
+                await event.reply("❌ Unable to fetch audio.")
+                return
 
-    await message.client.sendMessage(message.jid, {
-        react: { text: '⌛', key: message.data.key }
-    });
+            title = r["data"]["title"]
+            url = r["data"]["url"]
 
-    let temp = null;
+            temp = f"yta_{event.sender_id}.mp3"
 
-    try {
-        const API = `https://api-aswin-sparky.koyeb.app/api/downloader/song?search=${encodeURIComponent(input)}`;
-        const res = await axios.get(API);
+            audio = requests.get(url, stream=True)
+            with open(temp, "wb") as f:
+                for chunk in audio.iter_content(1024):
+                    f.write(chunk)
 
-        const { title, url } = res.data.data;
+            await bot.send_file(
+                event.chat_id,
+                temp,
+                caption=f"🎵 **{title}**"
+            )
 
-        temp = `yta_${Date.now()}.mp3`;
+            os.remove(temp)
 
-        const audio = await axios.get(url, { responseType: "stream" });
-        const file = fs.createWriteStream(temp);
-        audio.data.pipe(file);
-
-        await new Promise((res) => file.on("finish", res));
-
-        await message.client.sendMessage(message.jid, {
-            audio: { stream: fs.createReadStream(temp) },
-            mimetype: 'audio/mp4',
-            fileName: `${title}.mp3`
-        });
-
-        await message.client.sendMessage(message.jid, {
-            react: { text: '✅', key: message.data.key }
-        });
-
-    } catch (e) {
-        await message.client.sendMessage(message.jid, {
-            react: { text: '❌', key: message.data.key }
-        });
-
-    } finally {
-        activeDownloads.delete(downloadKey);
-        if (temp && fs.existsSync(temp)) fs.unlinkSync(temp);
-    }
-});
+        except Exception as e:
+            await event.reply(f"❌ Error: {e}")
