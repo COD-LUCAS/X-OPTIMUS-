@@ -27,7 +27,8 @@ def register(bot):
             "checkupdate": "Check bot updates",
             "setvar": "set variable in your bot",
             "delvar": "delete variable",
-            "rmbg": "remove background of photo"
+            "rmbg": "remove background of photo",
+            "img": "download images"
             
         }
 
