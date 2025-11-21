@@ -21,6 +21,10 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/update$"))
     async def update(event):
 
+        # OWNER CHECK
+        if event.sender_id != bot.owner_id:
+            return await event.reply("❌ Only owner can update the bot.")
+
         msg = await event.reply("⬇️ Downloading update...")
 
         try:
