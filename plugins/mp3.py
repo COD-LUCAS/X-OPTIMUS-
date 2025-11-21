@@ -1,53 +1,67 @@
 import os
 import asyncio
+import subprocess
 from telethon import events
-from moviepy.editor import VideoFileClip
+
+TEMP_DIR = "container_data/temp_mp3"
+
+if not os.path.exists(TEMP_DIR):
+    os.makedirs(TEMP_DIR, exist_ok=True)
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/mp3$"))
-    async def convert_to_mp3(event):
+    async def extract_mp3(event):
 
         if not event.is_reply:
-            return await event.reply("🎧 Reply to a video to extract audio.")
+            return await event.reply("🎧 Reply to a **video** to extract audio.")
 
         reply = await event.get_reply_message()
 
-        if not reply.video:
-            return await event.reply("❌ This is not a video. Reply to a video.")
+        if not reply.video and not reply.document:
+            return await event.reply("❌ Reply to a valid **video file**.")
 
-        msg = await event.reply("🎶 Extracting audio…")
+        status = await event.reply("🎧 **Extracting audio…**")
 
         try:
-            # Download video
-            video_path = await reply.download_media(file="video.mp4")
+            # download video to temp file
+            video_path = f"{TEMP_DIR}/input_{event.id}.mp4"
+            mp3_path = f"{TEMP_DIR}/output_{event.id}.mp3"
 
-            mp3_path = "output.mp3"
+            await reply.download_media(video_path)
 
-            # Convert to MP3 using moviepy
-            clip = VideoFileClip(video_path)
-            clip.audio.write_audiofile(mp3_path, codec="libmp3lame")
-            clip.close()
+            # Use ffmpeg (fastest possible)
+            cmd = [
+                "ffmpeg", "-i", video_path,
+                "-vn", "-acodec", "mp3",
+                "-ab", "128k",
+                "-ar", "44100",
+                "-y",
+                mp3_path
+            ]
 
-            # Send audio file
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            await process.communicate()
+
+            if not os.path.exists(mp3_path):
+                return await status.edit("❌ Failed to convert audio.")
+
             await bot.send_file(
                 event.chat_id,
                 mp3_path,
-                caption="🎵 **Here is your MP3**",
-                reply_to=event.id
+                caption="🎵 **Here is your MP3!**"
             )
 
-            await msg.delete()
+            await status.delete()
 
         except Exception as e:
-            await msg.edit(f"❌ Error:\n`{e}`")
+            await status.edit(f"❌ Error:\n`{e}`")
 
         finally:
-            # Cleanup
-            try:
-                if os.path.exists(video_path):
-                    os.remove(video_path)
-                if os.path.exists(mp3_path):
-                    os.remove(mp3_path)
-            except:
-                pass
+            # cleanup
+            if os.path.exists(video_path): os.remove(video_path)
+            if os.path.exists(mp3_path): os.remove(mp3_path)
