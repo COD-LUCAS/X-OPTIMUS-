@@ -27,7 +27,7 @@ def register(bot):
         built_in_plugins = {
             "insta": "Instagram downloader",
             "mp3": "To MP3",
-            "syt": "download song or audio in yt",
+            "yta": "download song or audio in yt",
             "yt": "YouTube downloader",
            "rbg": "remove background of photo",
             "img": "download images",
