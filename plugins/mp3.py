@@ -1,47 +1,53 @@
-import requests
+import os
+import asyncio
 from telethon import events
-from io import BytesIO
-
-API = "https://api-aswin-sparky.koyeb.app/api/downloader/song?search="
+from moviepy.editor import VideoFileClip
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/mp3 (.+)"))
-    async def yt_mp3(event):
-        query = event.pattern_match.group(1).strip()
+    @bot.on(events.NewMessage(pattern=r"^/mp3$"))
+    async def convert_to_mp3(event):
 
-        msg = await event.reply("🎧 Fetching audio…")
+        if not event.is_reply:
+            return await event.reply("🎧 Reply to a video to extract audio.")
+
+        reply = await event.get_reply_message()
+
+        if not reply.video:
+            return await event.reply("❌ This is not a video. Reply to a video.")
+
+        msg = await event.reply("🎶 Extracting audio…")
 
         try:
-            r = requests.get(API + query, timeout=20).json()
+            # Download video
+            video_path = await reply.download_media(file="video.mp4")
 
-            if not r.get("status") or "data" not in r:
-                return await msg.edit("❌ Could not find audio.")
+            mp3_path = "output.mp3"
 
-            info = r["data"]
-            title = info.get("title", "audio")
-            audio_url = info.get("url")
+            # Convert to MP3 using moviepy
+            clip = VideoFileClip(video_path)
+            clip.audio.write_audiofile(mp3_path, codec="libmp3lame")
+            clip.close()
 
-            if not audio_url:
-                return await msg.edit("❌ No audio URL found.")
-
-            await msg.edit("⬇️ Downloading audio…")
-
-            # Download FAST into memory
-            dl = requests.get(audio_url, timeout=50)
-            dl.raise_for_status()
-
-            audio_bytes = BytesIO(dl.content)
-            audio_bytes.name = f"{title}.mp3"
-
+            # Send audio file
             await bot.send_file(
                 event.chat_id,
-                audio_bytes,
-                caption=f"🎵 **{title}**",
-                force_document=False
+                mp3_path,
+                caption="🎵 **Here is your MP3**",
+                reply_to=event.id
             )
 
             await msg.delete()
 
         except Exception as e:
             await msg.edit(f"❌ Error:\n`{e}`")
+
+        finally:
+            # Cleanup
+            try:
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+                if os.path.exists(mp3_path):
+                    os.remove(mp3_path)
+            except:
+                pass
