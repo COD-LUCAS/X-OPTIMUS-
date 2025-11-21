@@ -5,6 +5,7 @@ import time
 from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.sessions import StringSession
+from telethon.tl.functions.channels import JoinChannelRequest
 
 CONFIGS = [
     "container_data/config.env",
@@ -63,6 +64,14 @@ def load_plugins():
                     print(f"Plugin error in {name}: {e}")
     return count
 
+
+async def auto_join_channel():
+    try:
+        await bot(JoinChannelRequest("xoptimusbothelp"))
+    except:
+        pass
+
+
 async def start_bot():
     global OWNER
     print("══════════════════════")
@@ -89,6 +98,8 @@ async def start_bot():
         bot.MODE = os.getenv("MODE", "PUBLIC").upper()
     else:
         bot.MODE = "PUBLIC"
+
+    await auto_join_channel()
 
     for m in plugins.values():
         if hasattr(m, "on_startup"):
