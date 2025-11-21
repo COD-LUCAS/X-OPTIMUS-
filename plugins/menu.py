@@ -14,6 +14,7 @@ def register(bot):
             "/ping": "Check bot latency",
             "/mode": "Change bot mode",
             "/install": "Install plugins",
+            "remove": "Remove installed plugins",
             "/reboot": "Restart the bot",
             "/info": "Get info of the bot"
         }
@@ -21,8 +22,8 @@ def register(bot):
         built_in_plugins = {
             "id": "Get user ID info",
             "insta": "Instagram downloader",
-            "mp3": "YouTube to MP3",
-            "remove": "Remove installed plugins",
+            "mp3": "To MP3",
+            "syt": "download song or audio in yt"
             "yt": "YouTube downloader",
             "checkupdate": "Check bot updates",
             "setvar": "set variable in your bot",
