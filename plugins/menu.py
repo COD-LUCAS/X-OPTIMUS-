@@ -29,7 +29,8 @@ def register(bot):
             "delvar": "delete variable",
             "rbg": "remove background of photo",
             "img": "download images",
-            "pdf" : "make pages to pdf"
+            "pdf" : "make pages to pdf",
+            "genimg" : "generate images using AI"
             
         }
 
