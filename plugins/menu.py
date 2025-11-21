@@ -28,7 +28,8 @@ def register(bot):
             "setvar": "set variable in your bot",
             "delvar": "delete variable",
             "rmbg": "remove background of photo",
-            "img": "download images"
+            "img": "download images",
+            "pdf" : "make pages to pdf"
             
         }
 
