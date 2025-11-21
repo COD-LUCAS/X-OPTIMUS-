@@ -1,49 +1,66 @@
-from telethon import events
 import os
+from telethon import events
 
 CONFIG = "container_data/config.env"
 
 def get_mode():
-    if not os.path.exists(CONFIG):
-        return "PUBLIC"
-    with open(CONFIG, "r") as f:
-        for x in f.readlines():
-            if x.startswith("MODE="):
-                return x.replace("MODE=", "").strip()
-    return "PUBLIC"
+    mode = "PUBLIC"
+    if os.path.exists(CONFIG):
+        with open(CONFIG, "r") as f:
+            for line in f.readlines():
+                if line.startswith("MODE="):
+                    mode = line.replace("MODE=", "").strip().upper()
+    return mode
 
-def set_mode(m):
+
+def set_mode(mode):
     lines = []
+    found = False
+
     if os.path.exists(CONFIG):
         with open(CONFIG, "r") as f:
             lines = f.readlines()
-    out = []
-    found = False
-    for x in lines:
-        if x.startswith("MODE="):
-            out.append(f"MODE={m}\n")
+
+    new_lines = []
+    for line in lines:
+        if line.startswith("MODE="):
+            new_lines.append(f"MODE={mode}\n")
             found = True
         else:
-            out.append(x)
+            new_lines.append(line)
+
     if not found:
-        out.append(f"MODE={m}\n")
+        new_lines.append(f"MODE={mode}\n")
+
     with open(CONFIG, "w") as f:
-        f.writelines(out)
+        f.writelines(new_lines)
+
 
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/mode(?:\s+(.*))?$"))
     async def mode_cmd(event):
-        if str(event.sender_id) != str(event.client.owner_id):
-            return
+
+        # OWNER CHECK FIXED
+        if event.sender_id != bot.owner_id:
+            return await event.reply("❌ Only owner can change bot mode.")
 
         arg = event.pattern_match.group(1)
+
+        # No argument → show current mode
         if not arg:
-            return await event.reply(f"Current Mode: **{get_mode()}**\nUse `/mode public` or `/mode private`")
+            return await event.reply(
+                f"🔧 **Current Mode:** `{get_mode()}`\n\n"
+                "Use:\n"
+                "`/mode public`\n"
+                "`/mode private`"
+            )
 
-        arg = arg.upper()
-        if arg not in ["PUBLIC", "PRIVATE"]:
-            return await event.reply("Use: `/mode public` or `/mode private`")
+        mode = arg.strip().upper()
 
-        set_mode(arg)
-        await event.reply(f"Mode changed to **{arg}**\nRestart bot.")
+        if mode not in ["PUBLIC", "PRIVATE"]:
+            return await event.reply("❌ Invalid mode.\nUse: `/mode public` or `/mode private`")
+
+        set_mode(mode)
+
+        await event.reply(f"✅ **Mode changed to {mode}**\n🔄 Reboot bot to apply changes.")
