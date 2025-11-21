@@ -1,32 +1,39 @@
 import requests
 from telethon import events
-import io
 
-PICSUM = "https://picsum.photos/600/400"
+API = "https://duckduckgo.com/i.js?l=us-en&o=json&q="
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/img ?(.*)"))
+    @bot.on(events.NewMessage(pattern=r"^/img (.+)"))
     async def img(event):
-        query = event.pattern_match.group(1).strip() or "random"
+        query = event.pattern_match.group(1).strip()
 
-        msg = await event.reply("🖼️ Fetching image...")
+        msg = await event.reply("🔎 Searching images…")
 
         try:
-            # picsum ignores query, but we use it for caption
-            r = requests.get(PICSUM, stream=True, timeout=15)
-            r.raise_for_status()
+            r = requests.get(API + query, headers={
+                "User-Agent": "Mozilla/5.0"
+            }, timeout=10).json()
 
-            image_bytes = io.BytesIO(r.content)
-            image_bytes.name = f"{query}.jpg"
+            results = r.get("results", [])
+            if not results:
+                return await msg.edit("❌ No images found.")
+
+            # get first real result
+            img_url = results[0].get("image")
+
+            if not img_url:
+                return await msg.edit("❌ Image URL not found.")
 
             await bot.send_file(
                 event.chat_id,
-                image_bytes,
-                caption=f"📷 **Random Image**\n🔍 Query: {query}"
+                img_url,
+                caption=f"📷 **Image Result**\n🔍 Query: {query}",
+                reply_to=event.id
             )
 
             await msg.delete()
 
         except Exception as e:
-            await msg.edit(f"❌ Error fetching image.\n`{e}`")
+            await msg.edit(f"❌ Error: `{e}`")
