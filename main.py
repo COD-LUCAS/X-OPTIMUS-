@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.functions.channels import JoinChannelRequest
+from telethon.tl.functions.messages import SendReactionRequest
+import random
 
 CONFIGS = [
     "container_data/config.env",
@@ -44,37 +46,30 @@ except:
 bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
 plugins = {}
 
-# -------------------------------------------------
-# REAL MODE LOADER (reads from config.env directly)
-# -------------------------------------------------
-def read_mode():
-    path = "container_data/config.env"
-    if not os.path.exists(path):
-        return "PUBLIC"
+REACTIONS = ["👍", "🔥", "😁", "❤️", "👌", "🤝", "🎯", "✨"]
 
-    with open(path, "r") as f:
-        for line in f:
-            if line.startswith("MODE="):
-                return line.replace("MODE=", "").strip().upper()
+async def auto_react(event, bot):
+    try:
+        emoji = random.choice(REACTIONS)
+        await bot(SendReactionRequest(
+            peer=event.chat_id,
+            msg_id=event.id,
+            reaction=[emoji]
+        ))
+    except:
+        pass
 
-    return "PUBLIC"
-
-
-# -------------------------
-# PRIVATE MODE PROTECTOR
-# -------------------------
 original_add_event = bot.add_event_handler
 
 def patched(handler, *args, **kwargs):
     async def wrapper(event):
         if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
             return
+        await auto_react(event, bot)
         return await handler(event)
-
     return original_add_event(wrapper, *args, **kwargs)
 
 bot.add_event_handler = patched
-
 
 def load_plugins():
     count = 0
@@ -96,13 +91,11 @@ def load_plugins():
                     print(f"Plugin error in {name}: {e}")
     return count
 
-
 async def auto_join_channel():
     try:
         await bot(JoinChannelRequest("xoptimusbothelp"))
     except:
         pass
-
 
 async def start_bot():
     global OWNER
@@ -126,9 +119,7 @@ async def start_bot():
         OWNER = str(me.id)
     bot.owner_id = int(OWNER)
 
-    # FIXED → read REAL mode from config file
-    bot.MODE = read_mode()
-    print("🔧 Mode:", bot.MODE)
+    bot.MODE = os.getenv("MODE", "PUBLIC").upper()
 
     await auto_join_channel()
 
