@@ -4,18 +4,19 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/id(?:\s+(.*))?$"))
     async def user_id(event):
+
         target = event.pattern_match.group(1)
 
         try:
-            # 1) Reply case: /id as reply
+            # Reply case
             if event.is_reply and not target:
                 msg = await event.get_reply_message()
                 entity = await msg.get_sender()
 
-            # 2) /id <something>
+            # /id <username or id>
             else:
                 if not target:
-                    return await event.reply("Usage: /id @user | user_id | reply")
+                    return await event.reply("Usage: `/id @user`, `/id user_id`, or reply to a user.")
 
                 t = target.strip()
 
@@ -26,20 +27,31 @@ def register(bot):
 
             u = entity
 
-            out = "**USER INFO**\n\n"
-            out += f"ID: `{u.id}`\n"
-            if getattr(u, 'access_hash', None) is not None:
-                out += f"Access Hash: `{u.access_hash}`\n"
-            if getattr(u, 'username', None):
-                out += f"Username: @{u.username}\n"
-            if getattr(u, 'phone', None):
-                out += f"Phone: `{u.phone}`\n"
-            if getattr(u, 'first_name', None):
-                out += f"First Name: `{u.first_name}`\n"
-            if getattr(u, 'last_name', None):
-                out += f"Last Name: `{u.last_name}`\n"
+            # Fetching full user info
+            out = "🧾 **USER INFORMATION**\n"
+            out += "━━━━━━━━━━━━━━━━━━\n"
+            out += f"🆔 **ID:** `{u.id}`\n"
+            out += f"🔐 **Access Hash:** `{getattr(u, 'access_hash', 'N/A')}`\n"
+            out += f"👤 **First Name:** `{u.first_name or 'N/A'}`\n"
+            out += f"👥 **Last Name:** `{u.last_name or 'N/A'}`\n"
+            out += f"📛 **Username:** @{u.username}\n" if u.username else ""
+            out += f"📱 **Phone:** `{u.phone}`\n" if u.phone else ""
+            out += f"💬 **Bot:** `{u.bot}`\n"
+            out += f"🚫 **Restricted:** `{u.restricted}`\n"
+            out += f"⚠ **Scam:** `{u.scam}`\n"
+            out += f"⭐ **Verified:** `{u.verified}`\n"
+            out += "━━━━━━━━━━━━━━━━━━"
 
-            await event.reply(out or "No data found.")
+            # Send DP if available
+            try:
+                photo = await bot.download_profile_photo(u, file="user_dp.jpg")
+                if photo:
+                    await bot.send_file(event.chat_id, photo, caption=out)
+                    return
+            except:
+                pass  # ignore DP errors
+
+            await event.reply(out)
 
         except Exception as e:
-            await event.reply(f"❌ Failed to fetch user.\n`{e}`")
+            await event.reply(f"❌ Error fetching user info:\n`{e}`")
