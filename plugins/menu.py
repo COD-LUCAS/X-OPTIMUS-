@@ -3,93 +3,73 @@ from telethon import events
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/menu$"))
+    @bot.on(events.NewMessage(pattern="^/menu$"))
     async def menu(event):
 
-        # MODE CHECK
+        # PRIVATE mode check
         if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
-            return  # silently block
+            return
 
-        # React to command (works on Telethon 1.34+)
+        # REAL TELEGRAM REACTION
         try:
-            await event.respond("👍")  # reaction simulation
+            await event.react("👍")
         except:
             pass
 
-        base_commands = {
-            "/menu": "Show available commands",
-            "/alive": "Check bot status",
-            "/ping": "Check bot latency",
-            "/mode": "Change bot mode",
-            "/reboot": "Restart the bot",
+        base = {
+            "/ping": "Check bot speed",
+            "/alive": "Show alive status",
             "/info": "Bot information",
-            "/checkupdate": "Check update",
-            "/update": "Update bot",
+            "/id": "Get user ID",
+            "/uptime": "Show uptime",
+            "/mode": "Change public/private",
             "/setvar": "Set ENV variable",
             "/delvar": "Delete ENV variable",
-            "/id": "User ID lookup",
-            "/uptime": "Show uptime",
-            "/install": "Install plugin",
-            "/remove": "Remove plugin",
+            "/checkupdate": "Check new updates",
+            "/update": "Update bot",
+            "/reboot": "Restart bot",
         }
 
-        built_in_plugins = {
-            "insta": "Instagram Downloader",
-            "yt": "YouTube video downloader",
-            "yta": "YouTube audio downloader",
+        builtin = {
+            "insta": "Instagram downloader",
+            "yt": "YouTube video",
+            "yta": "YouTube audio",
             "mp3": "MP3 converter",
             "img": "Image downloader",
             "genimg": "AI image generator",
-            "rbg": "Remove image background",
-            "pdf": "Convert images to PDF",
-            "url": "Upload media to Catbox"
+            "rbg": "Remove background",
+            "pdf": "Convert photos to PDF",
+            "url": "Upload media to Catbox",
         }
 
-        hidden = ["updater_notify.py", "startup.py"]
+        user_plugins = []
         plugin_dir = "container_data/user_plugins"
-        installed = []
-
         if os.path.exists(plugin_dir):
             for f in os.listdir(plugin_dir):
-                if f.endswith(".py") and f not in hidden:
-                    installed.append(f.replace(".py", ""))
+                if f.endswith(".py"):
+                    user_plugins.append(f.replace(".py", ""))
 
-        # TEXT BLOCK
         txt = (
-            "╔══════════════════════════╗\n"
-            "║     ⚡ X-OPTIMUS MENU ⚡     ║\n"
-            "╚══════════════════════════╝\n\n"
-            "🎯 **BASIC COMMANDS**\n"
-            "━━━━━━━━━━━━━━━━━━\n"
+            " **X-OPTIMUS COMMAND MENU** \n\n"
+            "🎯 **BASIC COMMANDS:**\n"
         )
 
-        for cmd, desc in base_commands.items():
-            txt += f"➤ `{cmd}` → {desc}\n"
+        for c, d in base.items():
+            txt += f"  • `{c}` → {d}\n"
 
-        txt += (
-            "\n🔧 **BUILT-IN FEATURES**\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-        )
+        txt += "\n⚙️ **BUILT-IN FEATURES:**\n"
+        for n, d in builtin.items():
+            txt += f"  • `{n}` → {d}\n"
 
-        for name, desc in built_in_plugins.items():
-            txt += f"✦ `{name}` → {desc}\n"
-
-        txt += (
-            "\n📦 **INSTALLED PLUGINS**\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-        )
-
-        if installed:
-            for p in installed:
-                txt += f"⚡ `{p}`\n"
+        txt += "\n📦 **INSTALLED PLUGINS:**\n"
+        if user_plugins:
+            for p in user_plugins:
+                txt += f"  • `{p}`\n"
         else:
-            txt += "❌ No installed plugins.\n"
+            txt += "  • None\n"
 
-        txt += "\n━━━━━━━━━━━━━━━━━━\n"
-
-        # Send menu image if exists
-        image_path = "assets/menu.jpg"
-        if os.path.exists(image_path):
-            await bot.send_file(event.chat_id, image_path, caption=txt)
+        img = "assets/menu.jpg"
+        if os.path.exists(img):
+            await bot.send_file(event.chat_id, img, caption=txt)
         else:
             await event.reply(txt)
