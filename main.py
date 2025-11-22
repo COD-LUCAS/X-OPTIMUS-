@@ -44,6 +44,22 @@ except:
 bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
 plugins = {}
 
+# -------------------------------------------------
+# REAL MODE LOADER (reads from config.env directly)
+# -------------------------------------------------
+def read_mode():
+    path = "container_data/config.env"
+    if not os.path.exists(path):
+        return "PUBLIC"
+
+    with open(path, "r") as f:
+        for line in f:
+            if line.startswith("MODE="):
+                return line.replace("MODE=", "").strip().upper()
+
+    return "PUBLIC"
+
+
 # -------------------------
 # PRIVATE MODE PROTECTOR
 # -------------------------
@@ -110,7 +126,9 @@ async def start_bot():
         OWNER = str(me.id)
     bot.owner_id = int(OWNER)
 
-    bot.MODE = os.getenv("MODE", "PUBLIC").upper()
+    # FIXED → read REAL mode from config file
+    bot.MODE = read_mode()
+    print("🔧 Mode:", bot.MODE)
 
     await auto_join_channel()
 
@@ -124,7 +142,5 @@ async def start_bot():
     print("🟢 BOT ONLINE & RUNNING")
     print("══════════════════════")
 
-bot.loop.run_until_complete(start_bot())
-bot.run_until_disconnected()
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
