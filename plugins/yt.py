@@ -7,25 +7,35 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/yt (.+)"))
     async def yt(event):
-        url = event.pattern_match.group(1).strip()
+        link = event.pattern_match.group(1).strip()
 
-        status = await event.reply("⏳ Fetching info…")
+        msg = await event.reply("⏳ Fetching video info…")
 
         try:
-            data = requests.get(API_YT + url, timeout=15).json()
+            # ---- RETRY SYSTEM ----
+            for i in range(3):
+                try:
+                    r = requests.get(API_YT + link, timeout=40)
+                    data = r.json()
+                    break
+                except Exception:
+                    if i == 2:
+                        raise
+                    await msg.edit("♻ Retrying…")
+
             if not data.get("status") or "data" not in data:
-                return await status.edit("❌ API error or invalid link.")
+                return await msg.edit("❌ API Error. Try again later.")
 
             info = data["data"]
-            video_url = info.get("url")
             title = info.get("title", "YouTube Video")
+            video_url = info.get("url")
 
             if not video_url:
-                return await status.edit("❌ No video URL found.")
+                return await msg.edit("❌ No video link returned.")
 
-            await status.edit("⚡ Sending video…")
+            await msg.edit("⚡ Sending video…")
 
-            # 💥 DIRECT LINK UPLOAD (SUPER FAST)
+            # ---- FAST DIRECT UPLOAD ----
             await bot.send_file(
                 event.chat_id,
                 video_url,
@@ -33,7 +43,7 @@ def register(bot):
                 supports_streaming=True
             )
 
-            await status.delete()
+            await msg.delete()
 
         except Exception as e:
-            await status.edit(f"❌ Error:\n`{e}`")
+            await msg.edit(f"❌ Error:\n`{e}`")
