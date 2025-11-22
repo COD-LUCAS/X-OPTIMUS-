@@ -1,15 +1,7 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.8",
   "changelog": [
-    "⚡ Fixed MP3 plugin (100% working, fast BytesIO mode)",
-    "🎧 Improved audio downloader stability",
-    "🖼 Added Uptime image support + fancy UI",
-    "🕒 Added Real uptime tracking in main.py",
-    "📌 Enhanced /info with version + GitHub link",
-    "🔧 Updated update-notifier with branding",
-    "🔒 Owner-only control for /update, /install, /remove, /mode",
-    "📦 Improved plugin loader stability",
-    "🚀 Optimized main.py for Render + Panel",
-    "🛡 Prevented MP3 freeze & silent failures"
+    "Improved /id command with full user details & profile photo",
+    "Fixed mode system — Public/Private now works correctly after reboot"
   ]
 }
