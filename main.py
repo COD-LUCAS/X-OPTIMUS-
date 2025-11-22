@@ -44,6 +44,22 @@ except:
 bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
 plugins = {}
 
+# -------------------------
+# PRIVATE MODE PROTECTOR
+# -------------------------
+original_add_event = bot.add_event_handler
+
+def patched(handler, *args, **kwargs):
+    async def wrapper(event):
+        if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
+            return
+        return await handler(event)
+
+    return original_add_event(wrapper, *args, **kwargs)
+
+bot.add_event_handler = patched
+
+
 def load_plugins():
     count = 0
     paths = ["plugins", "container_data/user_plugins"]
@@ -94,10 +110,7 @@ async def start_bot():
         OWNER = str(me.id)
     bot.owner_id = int(OWNER)
 
-    if os.path.exists("container_data/config.env"):
-        bot.MODE = os.getenv("MODE", "PUBLIC").upper()
-    else:
-        bot.MODE = "PUBLIC"
+    bot.MODE = os.getenv("MODE", "PUBLIC").upper()
 
     await auto_join_channel()
 
@@ -111,5 +124,7 @@ async def start_bot():
     print("🟢 BOT ONLINE & RUNNING")
     print("══════════════════════")
 
+bot.loop.run_until_complete(start_bot())
+bot.run_until_disconnected()
 bot.loop.run_until_complete(start_bot())
 bot.run_until_disconnected()
