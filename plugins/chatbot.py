@@ -4,9 +4,6 @@ from telethon import events
 
 MODELS = [
     "gemini-2.0-flash-exp",
-    "gemini-2.0-flash-thinking-exp",
-    "gemini-exp-1206",
-    "gemini-2.0-flash-lite",
     "gemini-1.5-flash",
     "gemini-1.5-flash-8b",
 ]
@@ -31,128 +28,100 @@ After that, enable chatbot:
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/chatbot(?:\s+(.*))?$"))
+    @bot.on(events.NewMessage(pattern=r"^/chatbot(?:\s+(.*))?$", outgoing=True))
     async def toggle(event):
         arg = event.pattern_match.group(1)
         api = os.getenv("GEMINI_API_KEY")
+        chat = event.chat_id
 
         if not arg:
-            status = "✅ **ON**" if STATE.get(event.chat_id) else "❌ **OFF**"
-            current_model = MODELS[MODEL.get(event.chat_id, 0)]
-            msg_count = len(CONTEXT.get(event.chat_id, []))
+            status = "✅ Enabled" if STATE.get(chat) else "❌ Disabled"
+            model = MODELS[MODEL.get(chat, 0)]
+            msgs = len(CONTEXT.get(chat, []))
             
-            return await event.reply(
-                f"**Chatbot Status:** {status}\n"
-                f"**Model:** `{current_model}`\n"
-                f"**Context:** {msg_count} messages\n\n"
-                f"**Usage:**\n"
+            return await event.edit(
+                f"**Chatbot Status**\n\n"
+                f"Status: {status}\n"
+                f"Model: `{model}`\n"
+                f"Messages: {msgs}\n\n"
+                f"**Commands:**\n"
                 f"`/chatbot on` - Enable\n"
                 f"`/chatbot off` - Disable\n"
-                f"`/chatbot clear` - Clear context\n"
+                f"`/chatbot clear` - Clear history\n"
                 f"`/chatbot model` - Switch model"
             )
 
         if arg == "on":
             if not api:
-                return await event.reply(HELP_TEXT)
+                return await event.edit(HELP_TEXT)
 
-            chat = event.chat_id
             STATE[chat] = True
-            if chat not in CONTEXT:
-                CONTEXT[chat] = []
-            if chat not in MODEL:
-                MODEL[chat] = 0
-            
-            return await event.reply(
-                f"✅ **Chatbot Enabled**\n"
-                f"🤖 Model: `{MODELS[0]}`\n\n"
-                f"Just send me a message or reply to any message!"
-            )
-
-        if arg == "off":
-            chat = event.chat_id
-            STATE[chat] = False
-            return await event.reply("❌ **Chatbot Disabled**")
-
-        if arg == "clear":
-            chat = event.chat_id
             CONTEXT[chat] = []
             MODEL[chat] = 0
-            return await event.reply("🗑️ **Context cleared!**")
+            
+            return await event.edit(
+                f"✅ **Chatbot Enabled**\n"
+                f"Model: `{MODELS[0]}`\n\n"
+                f"Send any message and I'll reply!"
+            )
 
-        if arg == "model":
-            chat = event.chat_id
+        elif arg == "off":
+            STATE[chat] = False
+            return await event.edit("❌ **Chatbot Disabled**")
+
+        elif arg == "clear":
+            CONTEXT[chat] = []
+            MODEL[chat] = 0
+            return await event.edit("🗑️ **History cleared**")
+
+        elif arg == "model":
             idx = MODEL.get(chat, 0)
             idx = (idx + 1) % len(MODELS)
             MODEL[chat] = idx
-            return await event.reply(f"🔄 **Switched to:** `{MODELS[idx]}`")
+            return await event.edit(f"🔄 **Model:** `{MODELS[idx]}`")
 
-        return await event.reply(
-            "❌ **Invalid command**\n\n"
-            "Use:\n"
-            "`/chatbot on` or `/chatbot off`"
-        )
+        else:
+            return await event.edit("❌ Use: `/chatbot on` or `/chatbot off`")
 
-    # AUTO RESPONSE (DMs and Groups)
-    @bot.on(events.NewMessage(incoming=True))
+    @bot.on(events.NewMessage(incoming=True, func=lambda e: not e.text.startswith('/')))
     async def auto_reply(event):
-        # Skip outgoing messages
-        if event.out:
-            return
-
         chat = event.chat_id
-        text = event.raw_text
-
-        # Skip empty messages
+        
+        # Check if chatbot is enabled for this chat
+        if not STATE.get(chat):
+            return
+        
+        text = event.text
         if not text or not text.strip():
             return
 
-        # Skip if chatbot not enabled for this chat
-        if not STATE.get(chat):
-            return
+        # Show typing indicator
+        async with bot.action(chat, 'typing'):
+            reply = await generate(chat, text.strip())
+        
+        await event.reply(reply)
 
-        # Skip commands
-        if text.startswith("/"):
-            return
-
-        # Skip if it's a media message without text
-        if event.media and not text:
-            return
-
-        # Generate and send reply
-        typing = await event.reply("💭 *Thinking...*")
-        try:
-            reply = await generate(event, text.strip())
-            await typing.edit(reply)
-        except Exception as e:
-            await typing.edit(f"❌ Error: `{str(e)}`")
-
-async def generate(event, msg):
-    chat = event.chat_id
+async def generate(chat, msg):
     api = os.getenv("GEMINI_API_KEY")
 
     if not api:
-        return HELP_TEXT
+        return "❌ API key not set. Use `/chatbot` for setup help."
 
     idx = MODEL.get(chat, 0)
     model = MODELS[idx]
-
-    # Get last 10 messages from context
     history = CONTEXT.get(chat, [])[-10:]
 
-    # Build payload
     payload = {
         "contents": [
-            {"role": "user", "parts": [{"text": "You are a helpful AI assistant. Be concise and friendly."}]},
-            *[
-                {"role": h["role"], "parts": [{"text": h["text"]}]}
-                for h in history
-            ],
+            *[{"role": h["role"], "parts": [{"text": h["text"]}]} for h in history],
             {"role": "user", "parts": [{"text": msg}]}
         ],
         "generationConfig": {
-            "temperature": 0.7,
+            "temperature": 0.9,
             "maxOutputTokens": 2048,
+        },
+        "systemInstruction": {
+            "parts": [{"text": "You are a helpful AI assistant. Be concise, friendly and natural."}]
         }
     }
 
@@ -160,50 +129,44 @@ async def generate(event, msg):
         url = f"{API_URL}{model}:generateContent?key={api}"
         r = requests.post(url, json=payload, timeout=30)
 
-        # Handle rate limiting
         if r.status_code == 429:
             if idx + 1 < len(MODELS):
                 MODEL[chat] = idx + 1
-                return await generate(event, msg)  # Retry with next model
-            return "❌ **Rate limit reached on all models.** Please try again later."
+                return await generate(chat, msg)
+            return "⚠️ Rate limit reached. Try again in a few minutes."
 
-        # Handle API errors
+        if r.status_code == 400:
+            error = r.json().get("error", {})
+            msg_text = error.get("message", "Unknown error")
+            return f"❌ API Error: {msg_text}"
+
         if r.status_code != 200:
-            error_msg = r.json().get("error", {}).get("message", "Unknown error")
-            return f"❌ **API Error ({r.status_code}):**\n`{error_msg}`"
+            return f"❌ Error {r.status_code}: {r.text[:200]}"
 
         data = r.json()
         
-        # Extract reply
         try:
-            reply = (
-                data.get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "")
-            )
-        except (IndexError, KeyError):
-            return "❌ **No response from API.** Try again."
+            reply = data["candidates"][0]["content"]["parts"][0]["text"]
+        except (KeyError, IndexError):
+            return "❌ Invalid API response. Try again."
 
         if not reply:
-            return "❌ **Empty response.** The model may have blocked this request."
+            return "❌ Empty response from AI."
 
-        # Save to context
+        # Save context
         if chat not in CONTEXT:
             CONTEXT[chat] = []
         
         CONTEXT[chat].append({"role": "user", "text": msg})
         CONTEXT[chat].append({"role": "model", "text": reply})
 
-        # Keep only last 20 exchanges (40 messages)
-        if len(CONTEXT[chat]) > 40:
-            CONTEXT[chat] = CONTEXT[chat][-40:]
+        # Keep last 20 messages
+        if len(CONTEXT[chat]) > 20:
+            CONTEXT[chat] = CONTEXT[chat][-20:]
 
         return reply
 
     except requests.Timeout:
-        return "⏱️ **Request timeout.** Try again."
-    except requests.RequestException as e:
-        return f"❌ **Network Error:**\n`{str(e)}`"
+        return "⏱️ Timeout. Try again."
     except Exception as e:
-        return f"❌ **Error:**\n`{str(e)}`"
+        return f"❌ Error: {str(e)[:200]}"
