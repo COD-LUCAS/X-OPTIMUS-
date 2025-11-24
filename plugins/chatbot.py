@@ -3,9 +3,9 @@ import requests
 from telethon import events
 
 MODELS = [
-    "gemini-2.0-flash",
     "gemini-1.5-flash",
-    "gemini-1.5-flash-8b"
+    "gemini-1.5-flash-8b",
+    "gemini-pro"
 ]
 
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
@@ -13,10 +13,11 @@ API_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
 STATE = {}
 CONTEXT = {}
 MODEL = {}
+PROMPT = {}
 
-HELP_TEXT = """❌ GEMINI_API_KEY Not Set
+HELP_TEXT = """❌ GEMINI_API_KEY Not Found
 
-Get API key:
+Get free API key:
 https://aistudio.google.com/app/apikey
 
 Set it:
@@ -28,118 +29,122 @@ Then enable chatbot:
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/chatbot(?:\s+(.*))?$"))
-    async def toggle(event):
-        owner = os.getenv("OWNER", "")
-        if str(event.sender_id) != owner:
-            return await event.reply("🦉 Only owner can use this command")
-
-        arg = event.pattern_match.group(1)
-        api = os.getenv("GEMINI_API_KEY")
+    @bot.on(events.NewMessage(pattern=r"^/chatbot(?:\s+(.*))?$", outgoing=True))
+    async def manage(event):
+        arg = (event.pattern_match.group(1) or "").strip()
         chat = event.chat_id
+        api = os.getenv("GEMINI_API_KEY")
 
         if not arg:
-            status = "ON" if STATE.get(chat) else "OFF"
-            api_status = "Set" if api else "Not Set"
+            s = "ON ✅" if STATE.get(chat) else "OFF ❌"
+            key = "SET ✅" if api else "NOT SET ❌"
             model = MODELS[MODEL.get(chat, 0)]
-            msgs = len(CONTEXT.get(chat, []))
-
-            return await event.reply(
+            ctx = len(CONTEXT.get(chat, []))
+            return await event.edit(
                 f"🤖 **Chatbot Status**\n\n"
-                f"Status: `{status}`\n"
-                f"API Key: `{api_status}`\n"
+                f"Status: **{s}**\n"
+                f"API Key: **{key}**\n"
                 f"Model: `{model}`\n"
-                f"Context: `{msgs}` msgs\n\n"
+                f"Context: `{ctx}` messages\n\n"
                 f"Commands:\n"
-                f"/chatbot on\n"
-                f"/chatbot off\n"
-                f"/chatbot clear\n"
-                f"/chatbot test"
+                f"`/chatbot on`\n"
+                f"`/chatbot off`\n"
+                f"`/chatbot clear`\n"
+                f"`/chatbot test`\n"
+                f"`/chatbot setprompt <text>`"
             )
 
         if arg == "on":
             if not api:
-                return await event.reply(HELP_TEXT)
-
+                return await event.edit(HELP_TEXT)
             STATE[chat] = True
             CONTEXT[chat] = []
             MODEL[chat] = 0
-            return await event.reply("✅ Chatbot Enabled")
+            PROMPT[chat] = "You are a helpful assistant."
+            return await event.edit("✅ Chatbot Enabled")
 
         if arg == "off":
             STATE[chat] = False
-            return await event.reply("❌ Chatbot Disabled")
+            return await event.edit("❌ Chatbot Disabled")
 
         if arg == "clear":
             CONTEXT[chat] = []
             MODEL[chat] = 0
-            return await event.reply("🗑️ Chat history cleared")
+            return await event.edit("🗑️ Chat history cleared")
+
+        if arg.startswith("setprompt"):
+            text = arg.replace("setprompt", "").strip()
+            if not text:
+                return await event.edit("❌ Usage: `/chatbot setprompt your text`")
+            PROMPT[chat] = text
+            return await event.edit("✅ Prompt updated")
 
         if arg == "test":
+            if not api:
+                return await event.edit(HELP_TEXT)
             if not STATE.get(chat):
-                return await event.reply("Enable first: /chatbot on")
+                return await event.edit("❌ Enable chatbot first: `/chatbot on`")
+            msg = await event.reply("🧪 Testing…")
             reply = await generate(chat, "Say 'Chatbot working!'")
-            return await event.reply(f"Test Result:\n\n{reply}")
+            return await msg.edit(f"**Test Result:**\n\n{reply}")
 
-        return await event.reply("Invalid command")
+        return await event.edit("❌ Invalid argument")
 
     @bot.on(events.NewMessage(incoming=True))
     async def auto(event):
-        text = event.raw_text
         chat = event.chat_id
+        text = event.text or ""
 
-        if not text or text.startswith("/"):
-            return
-        
         if not STATE.get(chat):
             return
 
+        if not text:
+            return
+
+        if text.startswith("/"):
+            return
+
         try:
-            async with bot.action(chat, 'typing'):
-                reply = await generate(chat, text)
+            async with bot.action(chat, "typing"):
+                reply = await generate(chat, text.strip())
             await event.reply(reply)
-        except:
-            pass
+        except Exception as e:
+            await event.reply(f"❌ AI Error: {str(e)}")
 
-
-async def generate(chat, msg):
+async def generate(chat, message):
     api = os.getenv("GEMINI_API_KEY")
     if not api:
-        return "API key missing"
+        return "❌ API key missing"
 
     idx = MODEL.get(chat, 0)
     model = MODELS[idx]
-    history = CONTEXT.get(chat, [])[-10:]
+
+    history = CONTEXT.get(chat, [])[ -10 : ]
+    system_prompt = PROMPT.get(chat, "You are a helpful assistant.")
 
     payload = {
         "contents": [
+            {"role": "system", "parts": [{"text": system_prompt}]},
             *[
-                {
-                    "role": h["role"],
-                    "parts": [{"text": h["text"]}]
-                }
+                {"role": h["role"], "parts": [{"text": h["text"]}]}
                 for h in history
             ],
-            {"role": "user", "parts": [{"text": msg}]}
-        ],
-        "generationConfig": {"temperature": 0.8}
+            {"role": "user", "parts": [{"text": message}]}
+        ]
     }
 
     try:
-        r = requests.post(
-            f"{API_URL}{model}:generateContent?key={api}",
-            json=payload,
-            timeout=20
-        )
+        url = f"{API_URL}{model}:generateContent?key={api}"
+        r = requests.post(url, json=payload, timeout=30)
 
         if r.status_code == 429:
             if idx + 1 < len(MODELS):
                 MODEL[chat] = idx + 1
-                return await generate(chat, msg)
-            return "Rate limit hit"
+                return await generate(chat, message)
+            return "⚠️ Rate limit reached. Try later."
 
         if r.status_code != 200:
-            return f"API Error {r.status_code}"
+            return f"❌ API Error {r.status_code}"
 
         data = r.json()
         reply = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -147,7 +152,7 @@ async def generate(chat, msg):
         if chat not in CONTEXT:
             CONTEXT[chat] = []
 
-        CONTEXT[chat].append({"role": "user", "text": msg})
+        CONTEXT[chat].append({"role": "user", "text": message})
         CONTEXT[chat].append({"role": "model", "text": reply})
 
         if len(CONTEXT[chat]) > 20:
@@ -156,4 +161,4 @@ async def generate(chat, msg):
         return reply
 
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"❌ Error: {str(e)}"
