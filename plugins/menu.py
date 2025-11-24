@@ -40,6 +40,7 @@ def register(bot):
             "rbg": "Remove background",
             "pdf": "Convert photos to PDF",
             "url": "Upload media to Catbox",
+            "chatbot": "chat automatically"
         }
 
         user_plugins = []
