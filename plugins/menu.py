@@ -5,72 +5,43 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern="^/menu$"))
     async def menu(event):
-
         # PRIVATE mode check
         if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
             return
 
-        # REAL TELEGRAM REACTION
+        # Quick reaction
         try:
-            await event.react("👍")
+            await event.react("⚡")
         except:
             pass
 
-        base = {
-            "/ping": "Check bot speed",
-            "/alive": "Show alive status",
-            "/info": "Bot information",
-            "/id": "Get user ID",
-            "/uptime": "Show uptime",
-            "/mode": "Change public/private",
-            "/setvar": "Set ENV variable",
-            "/delvar": "Delete ENV variable",
-            "/checkupdate": "Check new updates",
-            "/update": "Update bot",
-            "/reboot": "Restart bot",
-        }
-
-        builtin = {
-            "insta": "Instagram downloader",
-            "yt": "YouTube video",
-            "yta": "YouTube audio",
-            "mp3": "MP3 converter",
-            "img": "Image downloader",
-            "genimg": "AI image generator",
-            "rbg": "Remove background",
-            "pdf": "Convert photos to PDF",
-            "url": "Upload media to Catbox",
-            "chatbot": "chat automatically"
-        }
-
+        # Scan user plugins
         user_plugins = []
         plugin_dir = "container_data/user_plugins"
         if os.path.exists(plugin_dir):
-            for f in os.listdir(plugin_dir):
-                if f.endswith(".py"):
-                    user_plugins.append(f.replace(".py", ""))
+            user_plugins = [
+                f[:-3] for f in os.listdir(plugin_dir) 
+                if f.endswith(".py") and not f.startswith("_")
+            ]
 
+        # Build menu
         txt = (
-            " **X-OPTIMUS COMMAND MENU** \n\n"
-            "🎯 **BASIC COMMANDS:**\n"
+            "**⚡ X-OPTIMUS COMMANDS**\n\n"
+            "**BASIC:**\n"
+            "/ping /alive /info /id /uptime\n"
+            "/mode /reboot /setvar /delvar\n"
+            "/checkupdate /update\n\n"
+            "**FEATURES:**\n"
+            "insta yt yta mp3 img genimg\n"
+            "rbg pdf url chatbot\n"
         )
 
-        for c, d in base.items():
-            txt += f"  • `{c}` → {d}\n"
-
-        txt += "\n⚙️ **BUILT-IN FEATURES:**\n"
-        for n, d in builtin.items():
-            txt += f"  • `{n}` → {d}\n"
-
-        txt += "\n📦 **INSTALLED PLUGINS:**\n"
         if user_plugins:
-            for p in user_plugins:
-                txt += f"  • `{p}`\n"
+            txt += f"\n**PLUGINS ({len(user_plugins)}):**\n"
+            # Show in rows of 4
+            for i in range(0, len(user_plugins), 4):
+                txt += " ".join(user_plugins[i:i+4]) + "\n"
         else:
-            txt += "  • None\n"
+            txt += "\n**PLUGINS:** None"
 
-        img = "assets/menu.jpg"
-        if os.path.exists(img):
-            await bot.send_file(event.chat_id, img, caption=txt)
-        else:
-            await event.reply(txt)
+        await event.reply(txt, link_preview=False)
