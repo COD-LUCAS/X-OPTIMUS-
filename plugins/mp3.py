@@ -10,14 +10,20 @@ if not os.path.exists(TEMP_DIR):
 
 def register(bot):
 
-    @bot.on(events.NewMessage(pattern=r"^/mp3\s+(.+)$"))
+    @bot.on(events.NewMessage(pattern=r"^/mp3(?:\s+(.*))?$"))
     async def extract_mp3(event):
 
-        name = event.pattern_match.group(1).strip()
+        name = event.pattern_match.group(1)
 
-        # Check reply
+        # If no name is given
+        if not name:
+            return await event.reply("❗ Usage:\n`/mp3 {songname}`")
+
+        # Must reply to a video
         if not event.is_reply:
-            return await event.reply("🎧 Reply to a **video** with:\n`/mp3 filename`")
+            return await event.reply(
+                f"🎧 Now reply to a **video** with:\n`/mp3 {name}`"
+            )
 
         reply = await event.get_reply_message()
 
