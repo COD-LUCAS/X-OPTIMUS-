@@ -5,43 +5,73 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern="^/menu$"))
     async def menu(event):
+
         # PRIVATE mode check
         if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
             return
 
-        # Quick reaction
+        # REAL TELEGRAM REACTION
         try:
-            await event.react("⚡")
+            await event.react("👍")
         except:
             pass
 
-        # Scan user plugins
+        base = [
+            "/ping",
+            "/alive",
+            "/info",
+            "/id",
+            "/uptime",
+            "/mode",
+            "/setvar",
+            "/delvar",
+            "/checkupdate",
+            "/update",
+            "/reboot",
+            "/list"
+        ]
+
+        builtin = [
+            "insta",
+            "yt",
+            "yta",
+            "mp3",
+            "img",
+            "genimg",
+            "rbg",
+            "pdf",
+            "url",
+            "chatbot"
+        ]
+
         user_plugins = []
         plugin_dir = "container_data/user_plugins"
         if os.path.exists(plugin_dir):
-            user_plugins = [
-                f[:-3] for f in os.listdir(plugin_dir) 
-                if f.endswith(".py") and not f.startswith("_")
-            ]
+            for f in os.listdir(plugin_dir):
+                if f.endswith(".py"):
+                    user_plugins.append(f.replace(".py", ""))
 
-        # Build menu
         txt = (
-            "**⚡ X-OPTIMUS COMMANDS**\n\n"
-            "**BASIC:**\n"
-            "/ping /alive /info /id /uptime\n"
-            "/mode /reboot /setvar /delvar\n"
-            "/checkupdate /update\n\n"
-            "**FEATURES:**\n"
-            "insta yt yta mp3 img genimg\n"
-            "rbg pdf url chatbot\n"
+            " **X-OPTIMUS COMMAND MENU** \n\n"
+            "🎯 **BASIC COMMANDS:**\n"
         )
 
-        if user_plugins:
-            txt += f"\n**PLUGINS ({len(user_plugins)}):**\n"
-            # Show in rows of 4
-            for i in range(0, len(user_plugins), 4):
-                txt += " ".join(user_plugins[i:i+4]) + "\n"
-        else:
-            txt += "\n**PLUGINS:** None"
+        for c in base:
+            txt += f"  • `{c}`\n"
 
-        await event.reply(txt, link_preview=False)
+        txt += "\n⚙️ **BUILT-IN FEATURES:**\n"
+        for n in builtin:
+            txt += f"  • `{n}`\n"
+
+        txt += "\n📦 **INSTALLED PLUGINS:**\n"
+        if user_plugins:
+            for p in user_plugins:
+                txt += f"  • `{p}`\n"
+        else:
+            txt += "  • None\n"
+
+        img = "assets/menu.jpg"
+        if os.path.exists(img):
+            await bot.send_file(event.chat_id, img, caption=txt)
+        else:
+            await event.reply(txt)
