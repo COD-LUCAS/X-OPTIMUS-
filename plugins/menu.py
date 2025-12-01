@@ -14,36 +14,68 @@ def register(bot):
         except:
             pass
 
-        # BASIC
+        # Basic commands
         base = [
-            "/ping","/alive","/info","/id","/uptime",
-            "/mode","/setvar","/delvar","/checkupdate",
-            "/update","/reboot","/list"
+            "/ping",
+            "/alive",
+            "/info",
+            "/id",
+            "/uptime",
+            "/mode",
+            "/setvar",
+            "/delvar",
+            "/checkupdate",
+            "/update",
+            "/reboot",
+            "/list"
         ]
 
-        # BUILT-IN
+        # Built-in features (converted to /commands)
         builtin = [
-            "insta","yt","yta","mp3","img","genimg",
-            "rbg","pdf","url","chatbot"
+            "/insta",
+            "/yt",
+            "/yta",
+            "/mp3",
+            "/img",
+            "/genimg",
+            "/rbg",
+            "/pdf",
+            "/url",
+            "/chatbot"
         ]
 
-        # PLUGINS
+        # User plugins (also add / )
         plugin_dir = "container_data/user_plugins"
         user_plugins = [
-            f.replace(".py","") for f in os.listdir(plugin_dir)
+            "/" + f.replace(".py","") for f in os.listdir(plugin_dir)
             if f.endswith(".py")
         ] if os.path.exists(plugin_dir) else []
 
-        # TEXT (Ultra fast joining)
-        txt = (
-            " **X-OPTIMUS COMMAND MENU**\n\n"
-            "🎯 **BASIC COMMANDS:**\n"
-            f"`{'` `'.join(base)}`\n\n"
-            "⚙️ **BUILT-IN FEATURES:**\n"
-            f"`{'` `'.join(builtin)}`\n\n"
-            "📦 **INSTALLED PLUGINS:**\n"
-            f"`{'` `'.join(user_plugins) if user_plugins else 'None'}`"
-        )
+        # vertical blocks
+        base_block = "\n".join(base)
+        builtin_block = "\n".join(builtin)
+        plugin_block = "\n".join(user_plugins) if user_plugins else "None"
+
+        txt = f"""
+❍⊷══〘 **X-OPTIMUS BOT** 〙══⊷❍
+
+🕊️ **Available Commands**
+━━━━━━━━━━━━━━━━━━━━━━
+Use **/list** to get more info.
+━━━━━━━━━━━━━━━━━━━━━━
+
+**𝑩𝒂𝒔𝒊𝒄 𝑪𝒐𝒎𝒎𝒂𝒏𝒅𝒔**
+━━━━━━━━━━
+{base_block}
+
+**𝑩𝒖𝒊𝒍𝒕-𝒊𝒏 𝑭𝒆𝒂𝒕𝒖𝒓𝒆𝒔**
+━━━━━━━━━━
+{builtin_block}
+
+**𝑼𝒔𝒆𝒓 𝑷𝒍𝒖𝒈𝒊𝒏𝒔**
+━━━━━━━━━━
+{plugin_block}
+"""
 
         img = "assets/menu.jpg"
         if os.path.exists(img):
