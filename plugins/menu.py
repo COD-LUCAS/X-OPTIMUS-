@@ -9,51 +9,20 @@ def register(bot):
         if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
             return
 
+        # REAL MESSAGE REACTION ❤️
         try:
-            await event.react("👍")
+            await event.client.send_reaction(event.chat_id, event.id, "❤️")
         except:
             pass
 
-        # Basic commands
-        base = [
-            "/ping",
-            "/alive",
-            "/info",
-            "/id",
-            "/uptime",
-            "/mode",
-            "/setvar",
-            "/delvar",
-            "/checkupdate",
-            "/update",
-            "/reboot",
-            "/list"
-        ]
-
-        # Built-in features (converted to /commands)
-        builtin = [
-            "/insta",
-            "/yt",
-            "/yta",
-            "/mp3",
-            "/img",
-            "/genimg",
-            "/rbg",
-            "/pdf",
-            "/url",
-            "/chatbot"
-        ]
-
-        # User plugins (also add / )
+        # Scan ONLY user plugins
         plugin_dir = "container_data/user_plugins"
-        user_plugins = [
-            "/" + f.replace(".py","") for f in os.listdir(plugin_dir)
-            if f.endswith(".py")
-        ] if os.path.exists(plugin_dir) else []
+        user_plugins = []
+        if os.path.exists(plugin_dir):
+            for f in os.listdir(plugin_dir):
+                if f.endswith(".py"):
+                    user_plugins.append("/" + f.replace(".py", ""))
 
-        # vertical blocks
-        base_block = "\n".join(base)
-        builtin_block = "\n".join(builtin)
         plugin_block = "\n".join(user_plugins) if user_plugins else "None"
 
         txt = f"""
@@ -66,11 +35,31 @@ Use **/list** to get more info.
 
 **𝑩𝒂𝒔𝒊𝒄 𝑪𝒐𝒎𝒎𝒂𝒏𝒅𝒔**
 ━━━━━━━━━━
-{base_block}
+/ping
+/alive
+/info
+/id
+/uptime
+/mode
+/setvar
+/delvar
+/checkupdate
+/update
+/reboot
+/list
 
 **𝑩𝒖𝒊𝒍𝒕-𝒊𝒏 𝑭𝒆𝒂𝒕𝒖𝒓𝒆𝒔**
 ━━━━━━━━━━
-{builtin_block}
+/insta
+/yt
+/yta
+/mp3
+/img
+/genimg
+/rbg
+/pdf
+/url
+/chatbot
 
 **𝑼𝒔𝒆𝒓 𝑷𝒍𝒖𝒈𝒊𝒏𝒔**
 ━━━━━━━━━━
