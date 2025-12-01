@@ -6,34 +6,19 @@ STARTUP_IMAGE = "assets/startup.jpg"
 
 async def on_startup(bot):
     """
-    Runs automatically on startup via main.py's run_startup_events()
+    Runs automatically on startup
     """
     user = await bot.get_me()
-    current_time = datetime.now().strftime("%I:%M %p")
-    current_date = datetime.now().strftime("%B %d, %Y")
+    time_now = datetime.now().strftime("%I:%M %p")
 
     caption = f"""
-╔═══════════════════════════════╗
-║   🌟 X-OPTIMUS INITIALIZED 🌟   ║
-╚═══════════════════════════════╝
+**X-OPTIMUS**
 
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ 👤 **User**      ➜ {user.first_name}
-┃ 🆔 **User ID**   ➜ `{user.id}`
-┃ 📱 **Username**  ➜ @{user.username or 'N/A'}
-┃ ⚙️  **Mode**      ➜ Userbot
-┃ 🚀 **Status**    ➜ Online & Active
-┃ 🕐 **Time**      ➜ {current_time}
-┃ 📅 **Date**      ➜ {current_date}
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+User: {user.first_name}
+Status: Online
+Time: {time_now}
 
-✨ **All Systems Operational**
-🔥 **Ready to Execute Commands**
-💫 **Performance: Optimal**
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        Powered by Telethon
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ready to use ✓
 """
 
     try:
@@ -41,10 +26,8 @@ async def on_startup(bot):
             await bot.send_file("me", STARTUP_IMAGE, caption=caption)
         else:
             await bot.send_message("me", caption)
-    except Exception as e:
-        # Fallback simple message if formatting fails
-        simple_msg = f"🟢 X-OPTIMUS Started!\n👤 User: {user.first_name}\n✅ Status: Online"
-        await bot.send_message("me", simple_msg)
+    except:
+        await bot.send_message("me", f"X-OPTIMUS started for {user.first_name}")
 
 
 def register(bot):
@@ -54,20 +37,13 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/startup$"))
     async def manual_start(event):
         user = await bot.get_me()
-        current_time = datetime.now().strftime("%I:%M %p")
         
         status_msg = f"""
-╔═══════════════════════════════╗
-║      🔥 STATUS CHECK 🔥        ║
-╚═══════════════════════════════╝
+**Status Check**
 
-✅ **Bot Status:** Running
-👤 **User:** {user.first_name}
-🕐 **Current Time:** {current_time}
-⚡ **Response Time:** Instant
-💚 **Health:** Excellent
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Bot: Running
+User: {user.first_name}
+Response: Active
 """
         
         try:
@@ -76,4 +52,4 @@ def register(bot):
             else:
                 await event.reply(status_msg)
         except:
-            await event.reply("🟢 Bot is running perfectly!")
+            await event.reply("Bot is running ✓")
