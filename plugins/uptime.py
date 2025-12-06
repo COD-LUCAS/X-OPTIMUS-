@@ -1,6 +1,7 @@
 import os
 import time
 from telethon import events
+from main import START_TIME  
 
 def format_uptime(sec):
     m, s = divmod(sec, 60)
@@ -13,11 +14,7 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/uptime$"))
     async def uptime(event):
 
-        try:
-            sec = int(time.time() - bot.START_TIME)
-        except:
-            return await event.reply("❗ START_TIME not initialized in main.py")
-
+        sec = int(time.time() - START_TIME)
         uptime_text = format_uptime(sec)
 
         caption = (
