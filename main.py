@@ -12,6 +12,8 @@ from telethon.sessions import StringSession
 from telethon.tl.functions.messages import SendReactionRequest
 from telethon.tl.functions.channels import JoinChannelRequest
 
+START_TIME = time.time()
+
 def run(cmd):
     try:
         subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
