@@ -13,16 +13,19 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/uptime$"))
     async def uptime(event):
 
-        sec = int(time.time() - bot.START_TIME)
+        try:
+            sec = int(time.time() - bot.START_TIME)
+        except:
+            return await event.reply("❗ START_TIME not initialized in main.py")
+
         uptime_text = format_uptime(sec)
 
         caption = (
-            "━━━━━━━━━━━━━━━━\n"
-            "🕒 **X-OPTIMUS UPTIME**\n"
-            "━━━━━━━━━━━━━━━━\n"
+            "╔════ 🔰 **X-OPTIMUS UPTIME** 🔰 ════╗\n"
             f"⏱ **Running:** `{uptime_text}`\n"
-            "⚡ **Performance:** Excellent\n"
-            "━━━━━━━━━━━━━━━━"
+            f"⚡ **Status:** Stable\n"
+            f"💠 **Performance:** Excellent\n"
+            "╚═════════════════════════════════╝"
         )
 
         img = "assets/uptime.jpg"
