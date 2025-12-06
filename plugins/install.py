@@ -14,12 +14,19 @@ def register(bot):
     async def install_plugin(event):
 
         uid = event.sender_id
+        mode = bot.mode.lower()
 
-        if uid != bot.owner_id and uid not in bot.sudo_users:
-            return await event.reply("❌ Permission denied.")
+        # FIXED OWNER CHECK
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return await event.reply("❌ Private mode: access denied.")
+        else:
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return await event.reply("❌ Only owner or sudo can install plugins.")
 
         url = event.pattern_match.group(1).strip()
         msg = await event.reply("⬇️ Downloading plugin...")
+
         url = convert_to_raw_url(url)
 
         try:
@@ -42,17 +49,18 @@ def register(bot):
         response_msg = f"✅ **Plugin installed successfully!**\n\n"
         response_msg += f"📦 **Name:** `{name}`\n"
         response_msg += f"📍 **Path:** `{file_path}`\n"
-        
+
         if commands:
             response_msg += f"\n🔧 **Commands found:** ({len(commands)})\n"
             for cmd in commands[:10]:
                 response_msg += f"  • `{cmd}`\n"
             if len(commands) > 10:
-                response_msg += f"  • ...and {len(commands) - 10} more\n"
+                response_msg += f"  • *...and {len(commands) - 10} more*\n"
         else:
             response_msg += f"\n⚠️ No commands detected in this plugin.\n"
-        
-        response_msg += f"\n🔄 Restart bot using `/reboot` to activate."
+
+        response_msg += f"\n🔄 **Restart bot using** `/reboot` **to activate.**"
+
         await msg.edit(response_msg)
 
 
@@ -106,9 +114,9 @@ def extract_commands(code):
     pattern3 = re.findall(r'CMD\s*=\s*["\'](/\w+)', code)
     commands.extend([cmd for cmd in pattern3 if cmd not in commands])
     seen = set()
-    unique = []
+    unique_commands = []
     for cmd in commands:
         if cmd not in seen:
             seen.add(cmd)
-            unique.append(cmd)
-    return unique
+            unique_commands.append(cmd)
+    return unique_commands
