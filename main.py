@@ -4,11 +4,46 @@ import random
 import platform
 import time
 import asyncio
+import subprocess
+from datetime import datetime
 from dotenv import load_dotenv
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.functions.messages import SendReactionRequest
 from telethon.tl.functions.channels import JoinChannelRequest
+
+def run(cmd):
+    try:
+        subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except:
+        pass
+
+def install_ffmpeg():
+    try:
+        test = subprocess.run("ffmpeg -version", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if test.returncode == 0:
+            print("[FFMPEG] Installed ✓")
+            return
+        print("[FFMPEG] Not found → Installing...")
+        run("apt update -y")
+        run("apt install ffmpeg -y")
+        test2 = subprocess.run("ffmpeg -version", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if test2.returncode == 0:
+            print("[FFMPEG] Installed Successfully ✓")
+        else:
+            print("[FFMPEG] Install Failed ✗")
+    except:
+        print("[FFMPEG] Install Error")
+
+def install_python_packages():
+    try:
+        import PIL
+    except:
+        print("[PILLOW] Installing...")
+        run("pip install pillow --no-cache-dir")
+
+install_ffmpeg()
+install_python_packages()
 
 paths = [
     "container_data/config.env",
@@ -43,6 +78,27 @@ bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
 plugins = {}
 
 REACTIONS = ["👍","🔥","😁","❤️","👌","🤝","🎯","✨"]
+
+def color(t,c=37):
+    return f"\033[{c}m{t}\033[0m"
+
+def line():
+    print(color("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",36))
+
+def load_version():
+    try:
+        if os.path.exists("version.txt"):
+            return open("version.txt").read().strip()
+    except:
+        pass
+    return "v1.0.0"
+
+async def check_session():
+    try:
+        me = await bot.get_me()
+        return f"VALID 🔥 ({me.first_name})"
+    except:
+        return "INVALID ❌"
 
 async def auto_react(event):
     try:
@@ -123,24 +179,37 @@ def start_keepalive():
     Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
     Thread(target=ping).start()
 
-async def start():
-    print("X-OPTIMUS STARTING")
-    total = load_plugins()
-    print("API:", API_ID)
-    print("Plugins:", total)
+async def show_banner(version, platform_type, plugin_count, session_status):
+    os.system("clear || cls")
+    line()
+    print(color("🚀 X-OPTIMUS STARTING…",35))
+    line()
+    print(color("▶ SYSTEM INFO",33))
+    print(color("Time:",32), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print(color("Platform:",32), platform_type)
+    print(color("Version:",32), version)
+    print(color("KeepAlive:",32),
+        "ON (Port Enabled)" if platform_type in ["RENDER","KOYEB"] else "OFF (Panel/Local)")
+    print()
+    print(color("▶ BOT DETAILS",33))
+    print(color("API ID:",32), API_ID)
+    print(color("Plugins Loaded:",32), plugin_count)
+    print(color("Session:",32), session_status)
+    print()
+    print(color("🟢 BOT ONLINE",32))
+    line()
 
+async def start():
+    version = load_version()
+    total = load_plugins()
     platform_type = detect_platform()
-    print("Platform:", platform_type)
 
     if platform_type in ["RENDER", "KOYEB"]:
-        print("KeepAlive: ON (Port Enabled)")
         start_keepalive()
-    else:
-        print("KeepAlive: OFF (Panel/Local Detected)")
 
     await bot.start()
-    me = await bot.get_me()
 
+    me = await bot.get_me()
     global OWNER
     if not OWNER:
         OWNER = str(me.id)
@@ -157,7 +226,8 @@ async def start():
             except:
                 pass
 
-    print("BOT ONLINE")
+    session_status = await check_session()
+    await show_banner(version, platform_type, total, session_status)
 
 bot.loop.run_until_complete(start())
 bot.run_until_disconnected()
