@@ -6,45 +6,45 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/yta(?:\s+(.*))?$"))
     async def yta(event):
+
+        uid = event.sender_id
+        mode = bot.mode.lower()
+
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return
+
         query = event.pattern_match.group(1)
 
         if not query:
-            await event.reply("❌ Give YouTube link!\nExample:\n`/yta https://youtu.be/xxxx`")
-            return
+            return await event.reply("❌ Give YouTube link!\nExample:\n`/yta https://youtu.be/xxxx`")
 
         await event.reply("⏳ **Processing your audio...**")
 
         try:
-            # API call
             api = f"https://api-aswin-sparky.koyeb.app/api/downloader/song?search={query}"
             r = requests.get(api, timeout=20).json()
 
             if not r.get("status"):
-                await event.reply("❌ Unable to fetch audio from API.")
-                return
+                return await event.reply("❌ Unable to fetch audio from API.")
 
-            # Extract details
             title = r["data"]["title"]
             download_url = r["data"]["url"]
 
-            # Temp filename
             temp_file = f"yta_{event.sender_id}.mp3"
 
-            # Download audio file
             audio = requests.get(download_url, stream=True)
             with open(temp_file, "wb") as f:
                 for chunk in audio.iter_content(4096):
                     if chunk:
                         f.write(chunk)
 
-            # Send audio to user
             await bot.send_file(
                 event.chat_id,
                 temp_file,
-                caption=f"🎵 **{title}**\n\nDownloaded successfully ✔"
+                caption=f"🎵 **{title}**"
             )
 
-            # Delete temp file
             if os.path.exists(temp_file):
                 os.remove(temp_file)
 
