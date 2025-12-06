@@ -43,8 +43,11 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/checkupdate$"))
     async def check_update(event):
 
-        if str(event.sender_id) != str(bot.owner_id):
-            return await event.reply("❌ Only owner can check updates.")
+        uid = event.sender_id
+
+        # FIXED OWNER + SUDO PERMISSION
+        if uid != bot.owner_id and uid not in bot.sudo_users:
+            return await event.reply("❌ Only owner or sudo can check updates.")
 
         msg = await event.reply("🔍 Checking for updates...")
 
