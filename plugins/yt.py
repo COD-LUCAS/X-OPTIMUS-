@@ -8,6 +8,14 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/yt (.+)"))
     async def yt(event):
+
+        uid = event.sender_id
+        mode = bot.mode.lower()
+
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return
+
         link = event.pattern_match.group(1).strip()
         msg = await event.reply("⏳ Fetching video info…")
 
@@ -26,7 +34,6 @@ def register(bot):
 
             await msg.edit("⬇️ Downloading video…")
 
-            # ---- DOWNLOAD VIDEO ----
             file_path = "yt_video.mp4"
             with requests.get(video_url, stream=True, timeout=80) as v:
                 v.raise_for_status()
@@ -37,7 +44,6 @@ def register(bot):
 
             await msg.edit("📤 Uploading…")
 
-            # ---- SEND VIDEO ----
             await bot.send_file(
                 event.chat_id,
                 file_path,
