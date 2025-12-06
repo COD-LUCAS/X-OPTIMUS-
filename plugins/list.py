@@ -5,17 +5,22 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern="^/list$"))
     async def list_commands(event):
-        # PRIVATE mode check
-        if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
-            return
 
-        # Quick reaction
+        mode = bot.mode.lower()
+        uid = event.sender_id
+
+        # PRIVATE MODE → only owner & sudo allowed
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return  # silently block like other plugins
+
+        # Reaction
         try:
             await event.react("📋")
         except:
             pass
 
-        # All commands with descriptions
+        # Commands
         commands = {
             "**⚙️ BASIC COMMANDS**": {
                 "/ping": "Check bot response speed",
@@ -28,6 +33,10 @@ def register(bot):
                 "/mode": "Switch public/private mode",
                 "/setvar": "Set environment variable",
                 "/delvar": "Delete environment variable",
+                "/setsudo": "Add a sudo user",
+                "/delsudo": "Remove a sudo user",
+                "/install <raw_url>": "Install a new plugin",
+                "/remove <plugin>": "Remove installed plugin",
                 "/checkupdate": "Check for bot updates",
                 "/update": "Update bot to latest version",
                 "/reboot": "Restart the bot"
@@ -36,21 +45,21 @@ def register(bot):
                 "insta <url>": "Download Instagram media",
                 "yt <url>": "Download YouTube video",
                 "yta <url>": "Download YouTube audio",
-                "img <url>": "Download image from URL"
+                "img <url>": "Image placeholder tool (coming soon)"
             },
             "**🎨 MEDIA TOOLS**": {
                 "mp3": "Convert video to MP3 (reply to video)",
                 "genimg <prompt>": "Generate AI image",
-                "rbg": "Remove background (reply to image)",
-                "pdf": "Convert images to PDF (reply to images)",
-                "url": "Upload to Catbox (reply to media)"
+                "rbg": "Remove image background",
+                "pdf": "Convert images to PDF",
+                "url": "Upload media to Catbox"
             },
             "**🤖 AI FEATURES**": {
-                "chatbot": "Toggle auto-reply chatbot"
+                "chatbot": "Toggle auto AI replies"
             }
         }
 
-        # Build response
+        # Build Text
         txt = "**📋 ALL COMMANDS**\n\n"
         
         for category, cmds in commands.items():
@@ -59,20 +68,19 @@ def register(bot):
                 txt += f"`{cmd}` - {desc}\n"
             txt += "\n"
 
-        # Scan user plugins
-        user_plugins = []
+        # Scan for user plugins
         plugin_dir = "container_data/user_plugins"
         if os.path.exists(plugin_dir):
             user_plugins = [
-                f[:-3] for f in os.listdir(plugin_dir) 
+                f[:-3] for f in os.listdir(plugin_dir)
                 if f.endswith(".py") and not f.startswith("_")
             ]
 
-        if user_plugins:
-            txt += f"**🔌 CUSTOM PLUGINS ({len(user_plugins)})**\n"
-            for plugin in user_plugins:
-                txt += f"`{plugin}` - Custom plugin\n"
-            txt += "\n"
+            if user_plugins:
+                txt += f"**🔌 CUSTOM PLUGINS ({len(user_plugins)})**\n"
+                for plugin in user_plugins:
+                    txt += f"`{plugin}` - Installed plugin\n"
+                txt += "\n"
 
         txt += "💡 Type `/menu` for quick view"
 
