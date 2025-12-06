@@ -43,8 +43,7 @@ def register(bot):
                 "genimg <prompt>": "Generate AI image",
                 "rbg": "Remove background (reply to image)",
                 "pdf": "Convert images to PDF (reply to images)",
-                "url": "Upload to Catbox (reply to media)",
-                "sticker": "convert to sticker"
+                "url": "Upload to Catbox (reply to media)"
             },
             "**🤖 AI FEATURES**": {
                 "chatbot": "Toggle auto-reply chatbot"
