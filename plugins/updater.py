@@ -5,10 +5,7 @@ import requests
 from telethon import events
 
 ZIP_URL = "https://github.com/COD-LUCAS/X-OPTIMUS/archive/refs/heads/main.zip"
-ENV_FILE = "config.env"
-
 SAFE_DIRS = ["container_data"]
-
 
 def is_safe(path):
     for s in SAFE_DIRS:
@@ -16,60 +13,18 @@ def is_safe(path):
             return True
     return False
 
-
-def get_owner_id():
-    if not os.path.exists(ENV_FILE):
-        return None
-
-    with open(ENV_FILE, "r") as f:
-        for line in f:
-            if line.startswith("OWNER_ID="):
-                return int(line.replace("OWNER_ID=", "").strip())
-
-    return None
-
-
-def save_owner_id(uid):
-    lines = []
-    found = False
-
-    if os.path.exists(ENV_FILE):
-        with open(ENV_FILE, "r") as f:
-            lines = f.readlines()
-
-        for i, line in enumerate(lines):
-            if line.startswith("OWNER_ID="):
-                lines[i] = f"OWNER_ID={uid}\n"
-                found = True
-                break
-
-    if not found:
-        lines.append(f"OWNER_ID={uid}\n")
-
-    with open(ENV_FILE, "w") as f:
-        f.writelines(lines)
-
-
 def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/update$"))
     async def update(event):
 
-        # Load existing owner ID if available
-        owner_id = get_owner_id()
+        uid = event.sender_id
 
-        # Auto-detect owner if not saved yet
-        if owner_id is None:
-            owner_id = (await bot.get_me()).id
-            save_owner_id(owner_id)
-
-        # Permission check
-        if event.sender_id != owner_id:
-            return await event.reply("❌ Only the bot owner can update the bot.")
+        if uid != bot.owner_id and uid not in bot.sudo_users:
+            return await event.reply("❌ Permission denied.")
 
         msg = await event.reply("⬇️ Downloading update...")
 
-        # Download ZIP
         try:
             if os.path.exists("update_temp"):
                 shutil.rmtree("update_temp")
@@ -77,10 +32,10 @@ def register(bot):
 
             data = requests.get(ZIP_URL, timeout=20, verify=False).content
             open("update.zip", "wb").write(data)
+
         except Exception as e:
             return await msg.edit(f"❌ Download failed:\n`{e}`")
 
-        # Extract
         await msg.edit("📦 Extracting update...")
 
         try:
@@ -98,11 +53,9 @@ def register(bot):
         if os.path.isdir(os.path.join(extracted, "X-OPTIMUS")):
             extracted = os.path.join(extracted, "X-OPTIMUS")
 
-        # Apply update
         await msg.edit("♻️ Updating files...")
 
         try:
-            # Remove old files
             for item in os.listdir("."):
                 if item == "update_temp":
                     continue
@@ -116,7 +69,6 @@ def register(bot):
                 else:
                     shutil.rmtree(item)
 
-            # Copy new files
             for item in os.listdir(extracted):
                 src = os.path.join(extracted, item)
                 dst = item
