@@ -4,9 +4,7 @@ import requests
 from telethon import events
 
 SAVE_DIR = "container_data/user_plugins"
-
-if not os.path.exists(SAVE_DIR):
-    os.makedirs(SAVE_DIR, exist_ok=True)
+os.makedirs(SAVE_DIR, exist_ok=True)
 
 def register(bot):
 
@@ -16,13 +14,9 @@ def register(bot):
         uid = event.sender_id
         mode = bot.mode.lower()
 
-        # FIXED OWNER CHECK
-        if mode == "private":
-            if uid != bot.owner_id and uid not in bot.sudo_users:
-                return await event.reply("❌ Private mode: access denied.")
-        else:
-            if uid != bot.owner_id and uid not in bot.sudo_users:
-                return await event.reply("❌ Only owner or sudo can install plugins.")
+        # OWNER + SUDO CHECK (PUBLIC & PRIVATE)
+        if uid != bot.owner_id and uid not in bot.sudo_users:
+            return await event.reply("❌ Only owner or sudo members can install plugins.")
 
         url = event.pattern_match.group(1).strip()
         msg = await event.reply("⬇️ Downloading plugin...")
@@ -59,7 +53,7 @@ def register(bot):
         else:
             response_msg += f"\n⚠️ No commands detected in this plugin.\n"
 
-        response_msg += f"\n🔄 **Restart bot using** `/reboot` **to activate.**"
+        response_msg += f"\n🔄 Restart bot using `/reboot` to activate."
 
         await msg.edit(response_msg)
 
