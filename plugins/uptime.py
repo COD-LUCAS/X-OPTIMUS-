@@ -13,6 +13,13 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/uptime$"))
     async def uptime(event):
 
+        uid = event.sender_id
+        mode = bot.mode.lower()
+
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return
+
         if not hasattr(bot, "START_TIME"):
             bot.START_TIME = time.time()
 
