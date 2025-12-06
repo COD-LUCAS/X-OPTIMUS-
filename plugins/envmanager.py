@@ -25,9 +25,11 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/setvar\s*(.*)"))
     async def setvar(event):
+
         uid = event.sender_id
-if uid != bot.owner_id and uid not in bot.sudo_users:
-    return await event.reply("❌ Permission denied.")
+        if uid != bot.owner_id and uid not in bot.sudo_users:
+            return await event.reply("❌ Permission denied.")
+
         args = event.pattern_match.group(1).strip()
 
         if not args or "=" not in args:
@@ -47,9 +49,10 @@ if uid != bot.owner_id and uid not in bot.sudo_users:
 
     @bot.on(events.NewMessage(pattern=r"^/delvar\s*(.*)"))
     async def delvar(event):
+
         uid = event.sender_id
-if uid != bot.owner_id and uid not in bot.sudo_users:
-    return await event.reply("❌ Permission denied.")
+        if uid != bot.owner_id and uid not in bot.sudo_users:
+            return await event.reply("❌ Permission denied.")
 
         key = event.pattern_match.group(1).strip()
 
