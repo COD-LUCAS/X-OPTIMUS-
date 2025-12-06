@@ -25,14 +25,13 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/info$"))
     async def info(event):
 
-        # ----------------------------------------------------
+        uid = event.sender_id
+        mode = bot.mode.lower()
+
         # PRIVATE MODE → ONLY OWNER + SUDO CAN USE /info
-        # ----------------------------------------------------
-        if bot.MODE == "PRIVATE":
-            user_id = str(event.sender_id)
-            is_sudo = hasattr(bot, "SUDOS") and user_id in bot.SUDOS
-            if event.sender_id != bot.owner_id and not is_sudo:
-                return  # silently ignore
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return  # Ignore silently (same as your code)
 
         me = await bot.get_me()
         version = get_bot_version()
@@ -43,7 +42,7 @@ def register(bot):
             "──────────────────────────\n\n"
             f"🤖 **Bot ID:** `{me.id}`\n"
             f"👑 **Owner:** `@codlucas`\n"
-            f"🔧 **Mode:** `{bot.MODE}`\n"
+            f"🔧 **Mode:** `{bot.mode}`\n"
             f"📦 **Plugins Loaded:** `{len(bot.list_event_handlers())}`\n"
             f"🧩 **Bot Version:** `{version}`\n\n"
             "📂 **GitHub Repo:**\n"
