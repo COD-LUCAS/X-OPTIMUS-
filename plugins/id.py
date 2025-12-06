@@ -5,21 +5,24 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/id(?:\s+(.*))?$"))
     async def user_id(event):
 
+        mode = bot.mode.lower()
+        uid = event.sender_id
+
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return await event.reply("❌ Private mode: only owner or sudo can use this command.")
+
         target = event.pattern_match.group(1)
 
         try:
-            # Reply case
             if event.is_reply and not target:
                 msg = await event.get_reply_message()
                 entity = await msg.get_sender()
-
-            # /id <username or id>
             else:
                 if not target:
                     return await event.reply("Usage: `/id @user`, `/id user_id`, or reply to a user.")
 
                 t = target.strip()
-
                 try:
                     entity = await bot.get_entity(int(t))
                 except ValueError:
@@ -27,7 +30,6 @@ def register(bot):
 
             u = entity
 
-            # Fetching full user info
             out = "🧾 **USER INFORMATION**\n"
             out += "━━━━━━━━━━━━━━━━━━\n"
             out += f"🆔 **ID:** `{u.id}`\n"
@@ -42,14 +44,13 @@ def register(bot):
             out += f"⭐ **Verified:** `{u.verified}`\n"
             out += "━━━━━━━━━━━━━━━━━━"
 
-            # Send DP if available
             try:
                 photo = await bot.download_profile_photo(u, file="user_dp.jpg")
                 if photo:
                     await bot.send_file(event.chat_id, photo, caption=out)
                     return
             except:
-                pass  # ignore DP errors
+                pass
 
             await event.reply(out)
 
