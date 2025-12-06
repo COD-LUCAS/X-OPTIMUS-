@@ -9,6 +9,13 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/url$"))
     async def upload_to_catbox(event):
 
+        uid = event.sender_id
+        mode = bot.mode.lower()
+
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return
+
         if not event.is_reply:
             return await event.reply("📌 Reply `/url` to a media file (photo, video, audio, doc).")
 
@@ -20,13 +27,11 @@ def register(bot):
         status = await event.reply("⬆️ Uploading to Catbox… Please wait.")
 
         try:
-            # Download media to temp
             file_path = await bot.download_media(reply, file="catbox_temp")
 
             if not file_path or not os.path.exists(file_path):
                 return await status.edit("❌ Failed to download media.")
 
-            # Upload to catbox
             files = {"fileToUpload": open(file_path, "rb")}
             data = {"reqtype": "fileupload"}
 
