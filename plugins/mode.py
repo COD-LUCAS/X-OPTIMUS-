@@ -12,15 +12,12 @@ def get_mode():
                     mode = line.replace("MODE=", "").strip().upper()
     return mode
 
-
 def set_mode(mode):
     lines = []
     found = False
-
     if os.path.exists(CONFIG):
         with open(CONFIG, "r") as f:
             lines = f.readlines()
-
     new_lines = []
     for line in lines:
         if line.startswith("MODE="):
@@ -28,13 +25,10 @@ def set_mode(mode):
             found = True
         else:
             new_lines.append(line)
-
     if not found:
         new_lines.append(f"MODE={mode}\n")
-
     with open(CONFIG, "w") as f:
         f.writelines(new_lines)
-
 
 def register(bot):
 
@@ -42,11 +36,11 @@ def register(bot):
     async def mode_cmd(event):
 
         uid = event.sender_id
-if uid != bot.owner_id and uid not in bot.sudo_users:
-    return await event.reply("❌ Permission denied.")
+        if uid != bot.owner_id and uid not in bot.sudo_users:
+            return await event.reply("❌ Permission denied.")
+
         arg = event.pattern_match.group(1)
 
-        # No argument → show current mode
         if not arg:
             return await event.reply(
                 f"🔧 **Current Mode:** `{get_mode()}`\n\n"
