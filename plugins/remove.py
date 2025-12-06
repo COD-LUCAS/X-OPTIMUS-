@@ -8,15 +8,16 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/remove\s+(.+)"))
     async def remove_plugin(event):
 
-        # OWNER CHECK
-        if event.sender_id != bot.owner_id:
-            return await event.reply("❌ Only owner can remove plugins.")
+        uid = event.sender_id
+
+        if uid != bot.owner_id and uid not in bot.sudo_users:
+            return await event.reply("❌ Permission denied.")
 
         name = event.pattern_match.group(1).strip()
         path = f"{USER_DIR}/{name}.py"
 
         if not os.path.exists(path):
-            return await event.reply("❌ Plugin not found in installed plugins.")
+            return await event.reply("❌ Plugin not found.")
 
         try:
             os.remove(path)
