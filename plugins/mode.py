@@ -41,10 +41,9 @@ def register(bot):
     @bot.on(events.NewMessage(pattern=r"^/mode(?:\s+(.*))?$"))
     async def mode_cmd(event):
 
-        # OWNER CHECK FIXED
-        if event.sender_id != bot.owner_id:
-            return await event.reply("❌ Only owner can change bot mode.")
-
+        uid = event.sender_id
+if uid != bot.owner_id and uid not in bot.sudo_users:
+    return await event.reply("❌ Permission denied.")
         arg = event.pattern_match.group(1)
 
         # No argument → show current mode
