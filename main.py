@@ -102,20 +102,16 @@ async def check_session():
     except:
         return "INVALID ❌"
 
-async def auto_react(event):
-    try:
-        emoji = random.choice(REACTIONS)
-        await bot(SendReactionRequest(peer=event.chat_id, msg_id=event.id, reaction=[emoji]))
-    except:
-        pass
-
 _original = bot.add_event_handler
 
 def patched(handler, *a, **kw):
     async def wrap(event):
-        if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
-            return
-        await auto_react(event)
+        uid = event.sender_id
+        mode = getattr(bot, "mode", "public").lower()
+        sudo = getattr(bot, "sudo_users", [])
+        if mode == "private":
+            if uid != bot.owner_id and uid not in sudo:
+                return
         return await handler(event)
     return _original(wrap, *a, **kw)
 
@@ -217,7 +213,13 @@ async def start():
         OWNER = str(me.id)
 
     bot.owner_id = int(OWNER)
-    bot.MODE = os.getenv("MODE", "PUBLIC").upper()
+
+    sudo_str = os.getenv("SUDO", "")
+    bot.sudo_users = [int(x) for x in sudo_str.split()] if sudo_str else []
+
+    bot.mode = os.getenv("MODE", "public").lower()
+    bot.MODE = bot.mode.upper()
+    bot.uid = me.id
 
     await auto_join()
 
