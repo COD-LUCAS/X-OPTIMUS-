@@ -6,72 +6,69 @@ def register(bot):
 
     @bot.on(events.NewMessage(pattern=r"^/(genimg|aiimg)(?:\s+(.*))?$"))
     async def ai_generate(event):
-        cmd = event.pattern_match.group(1)
+
+        mode = bot.mode.lower()
+        uid = event.sender_id
+
+        # PRIVATE MODE → ONLY OWNER + SUDO
+        if mode == "private":
+            if uid != bot.owner_id and uid not in bot.sudo_users:
+                return await event.reply("❌ Private mode: only owner or sudo can generate AI images.")
+
         prompt = event.pattern_match.group(2)
 
-        # HELP MESSAGE
+        # HELP
         if not prompt:
             return await event.reply(
                 "🎨 **AI IMAGE GENERATOR**\n\n"
-                "**Usage:**\n"
-                "`/gen your prompt`\n"
-                "Example: `/gen cyberpunk robot cat`\n\n"
-                "🧩 **API Required (OpenAI)**\n"
-                "Follow these steps:\n"
-                "1️⃣ Go to https://platform.openai.com/\n"
-                "2️⃣ Login → Click **API Keys**\n"
-                "3️⃣ Create new key\n"
-                "4️⃣ Copy the key\n"
-                "5️⃣ Set it inside bot using:\n"
-                "```\n"
-                "/setvar IMG_API_KEY=your_openai_key_here\n"
-                "```\n\n"
-                "✔ Supported Models: DALL·E, GPT-Image-1\n"
+                "**Usage:** `/genimg your prompt`\n"
+                "Example: `/genimg cyberpunk robot cat`\n\n"
+                "🧩 **API Required (OpenAI GPT-Image-1)**\n"
+                "Get key: https://platform.openai.com/api-keys\n\n"
+                "Set key:\n"
+                "`/setvar IMG_API_KEY=your_openai_key_here`"
             )
 
         api_key = os.getenv("IMG_API_KEY")
-
         if not api_key:
             return await event.reply(
                 "❌ **IMG_API_KEY missing!**\n\n"
-                "Get OpenAI key from:\n"
+                "Get your OpenAI API key here:\n"
                 "👉 https://platform.openai.com/api-keys\n\n"
-                "Then set it using:\n"
+                "Set using:\n"
                 "`/setvar IMG_API_KEY=your_key_here`"
             )
 
-        processing = await event.reply(f"🎨 Generating image for: **{prompt}** ...")
+        status = await event.reply(f"🎨 Generating image for: **{prompt}** ...")
 
-        # ---- OPENAI IMAGE GENERATION ----
+        # ---- NEW OPENAI IMAGE API (WORKING) ----
         try:
             url = "https://api.openai.com/v1/images/generations"
-
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             }
-
-            body = {
+            payload = {
                 "model": "gpt-image-1",
                 "prompt": prompt,
                 "size": "1024x1024"
             }
 
-            response = requests.post(url, headers=headers, json=body, timeout=60)
+            res = requests.post(url, headers=headers, json=payload, timeout=60)
 
-            if response.status_code != 200:
-                return await processing.edit(f"❌ API Error:\n`{response.text}`")
+            if res.status_code != 200:
+                return await status.edit(f"❌ API Error:\n`{res.text}`")
 
-            data = response.json()
+            data = res.json()
             img_url = data["data"][0]["url"]
 
             await bot.send_file(
                 event.chat_id,
                 img_url,
-                caption=f"✨ **AI Image Generated**\n📝 Prompt: `{prompt}`\n\nModel: GPT-Image-1"
+                caption=f"✨ **AI Image Generated**\n📝 Prompt: `{prompt}`\nModel: GPT-Image-1"
             )
 
-            await processing.delete()
+            await status.delete()
 
         except Exception as e:
-            await processing.edit(f"❌ Unexpected Error:\n`{e}`")
+            await status.edit(f"❌ Unexpected Error:\n`{e}`")
