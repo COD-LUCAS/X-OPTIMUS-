@@ -5,16 +5,12 @@ import platform
 import time
 import asyncio
 from dotenv import load_dotenv
-
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.functions.messages import SendReactionRequest
 from telethon.tl.functions.channels import JoinChannelRequest
 
-# =====================================================================
-#  CONFIG LOADER (Supports All Platforms)
-# =====================================================================
-CONFIG_PATHS = [
+paths = [
     "container_data/config.env",
     "/home/container/container_data/config.env",
     "/home/container/config.env",
@@ -22,14 +18,14 @@ CONFIG_PATHS = [
 ]
 
 loaded = False
-for p in CONFIG_PATHS:
+for p in paths:
     if os.path.exists(p):
         load_dotenv(p)
         loaded = True
         break
 
 if not loaded:
-    print("❌ Missing config.env")
+    print("config.env not found")
     exit()
 
 API_ID = os.getenv("API_ID")
@@ -38,199 +34,114 @@ STRING = os.getenv("STRING_SESSION")
 OWNER = os.getenv("OWNER", "")
 
 if not API_ID or not API_HASH or not STRING:
-    print("❌ API_ID / API_HASH / STRING_SESSION missing")
+    print("Missing API credentials")
     exit()
 
 API_ID = int(API_ID)
 
-# =====================================================================
-#  KEEP ALIVE + AUTO URL FETCH + SELF PING
-# =====================================================================
-import requests
-from threading import Thread
-from flask import Flask
-
-app = Flask(__name__)
-PUBLIC_URL = None
-
-
-@app.route("/")
-def home():
-    return "Bot Alive"
-
-
-def detect_public_url():
-    """
-    Auto-detect Render public URL:
-    1) Env var
-    2) Metadata API (Render)
-    3) Domain guess fallback
-    """
-    global PUBLIC_URL
-
-    # 1) If Render provides it in env
-    if os.getenv("RENDER_EXTERNAL_URL"):
-        PUBLIC_URL = os.getenv("RENDER_EXTERNAL_URL")
-        return PUBLIC_URL
-
-    # 2) Try Metadata API
-    try:
-        meta = requests.get(
-            "http://100.100.100.100/metadata",
-            headers={"Metadata-Flavor": "Google"},
-            timeout=2
-        ).json()
-
-        if "service" in meta and "url" in meta["service"]:
-            PUBLIC_URL = meta["service"]["url"]
-            return PUBLIC_URL
-    except:
-        pass
-
-    # 3) Fallback guess
-    try:
-        name = os.getenv("RENDER_SERVICE_NAME")
-        if name:
-            PUBLIC_URL = f"https://{name}.onrender.com"
-            return PUBLIC_URL
-    except:
-        pass
-
-    PUBLIC_URL = ""
-    return ""
-
-
-def self_ping():
-    """Send request every 4 minutes to avoid Render sleeping."""
-    global PUBLIC_URL
-    time.sleep(5)
-
-    while True:
-        if not PUBLIC_URL:
-            detect_public_url()
-
-        if PUBLIC_URL:
-            try:
-                requests.get(PUBLIC_URL)
-                print("🔄 Self Ping →", PUBLIC_URL)
-            except:
-                print("❌ Self Ping Failed")
-        else:
-            print("⚠ URL not detected yet")
-
-        time.sleep(240)  # ping every 4 min
-
-
-def start_keep_alive():
-    Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
-    Thread(target=self_ping).start()
-
-
-# Start anti-sleep system
-try:
-    start_keep_alive()
-    print("⚡ Anti-Sleep KeepAlive System Running")
-except Exception as e:
-    print("⚠ KeepAlive Failed:", e)
-
-# =====================================================================
-#  BOT INITIALIZATION
-# =====================================================================
 bot = TelegramClient(StringSession(STRING), API_ID, API_HASH)
 plugins = {}
 
-REACTIONS = ["👍", "🔥", "😁", "❤️", "👌", "🤝", "🎯", "✨"]
-
+REACTIONS = ["👍","🔥","😁","❤️","👌","🤝","🎯","✨"]
 
 async def auto_react(event):
     try:
         emoji = random.choice(REACTIONS)
-        await bot(SendReactionRequest(
-            peer=event.chat_id,
-            msg_id=event.id,
-            reaction=[emoji]
-        ))
+        await bot(SendReactionRequest(peer=event.chat_id, msg_id=event.id, reaction=[emoji]))
     except:
         pass
 
+_original = bot.add_event_handler
 
-# PATCH EVENT HANDLER
-_original_add = bot.add_event_handler
-
-
-def patched(handler, *args, **kwargs):
-    async def wrapper(event):
+def patched(handler, *a, **kw):
+    async def wrap(event):
         if bot.MODE == "PRIVATE" and event.sender_id != bot.owner_id:
             return
         await auto_react(event)
         return await handler(event)
-
-    return _original_add(wrapper, *args, **kwargs)
-
+    return _original(wrap, *a, **kw)
 
 bot.add_event_handler = patched
 
-# =====================================================================
-#  PLUGIN LOADER
-# =====================================================================
 def load_plugins():
-    count = 0
-    paths = ["plugins", "container_data/user_plugins"]
-
-    for folder in paths:
-        if not os.path.exists(folder):
+    total = 0
+    folders = ["plugins", "container_data/user_plugins"]
+    for folder in folders:
+        if not os.path.isdir(folder):
             continue
-
         for f in os.listdir(folder):
-            if f.endswith(".py") and f != "__init__.py":
-                name = f[:-3]
-                module_name = f"{folder.replace('/', '.')}.{name}"
+            if not f.endswith(".py") or f == "__init__.py":
+                continue
+            name = f[:-3]
+            module_path = f"{folder.replace('/', '.')}.{name}"
+            try:
+                module = importlib.import_module(module_path)
+                plugins[name] = module
+                if hasattr(module, "register"):
+                    module.register(bot)
+                total += 1
+            except Exception as e:
+                print(f"Plugin error ({name}): {e}")
+    return total
 
-                try:
-                    module = importlib.import_module(module_name)
-                    plugins[name] = module
-
-                    if hasattr(module, "register"):
-                        module.register(bot)
-
-                    count += 1
-                except Exception as e:
-                    print(f"❌ Plugin Error ({name}): {e}")
-
-    return count
-
-
-# =====================================================================
-#  AUTO JOIN CHANNEL
-# =====================================================================
 async def auto_join():
     try:
         await bot(JoinChannelRequest("xoptimusbothelp"))
     except:
         pass
 
+def detect_platform():
+    if os.getenv("RENDER"):
+        return "RENDER"
+    if os.getenv("KOYEB_APP_ID"):
+        return "KOYEB"
+    if "container" in os.getcwd() or "ptero" in os.getcwd().lower():
+        return "PANEL"
+    return "LOCAL"
 
-# =====================================================================
-#  START BOT
-# =====================================================================
-async def start_bot():
-    global OWNER
+def start_keepalive():
+    import requests
+    from threading import Thread
+    from flask import Flask
 
-    print("══════════════════════════════")
-    print("🚀 X-OPTIMUS STARTING")
-    print("══════════════════════════════")
+    app = Flask(__name__)
+    url = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("KOYEB_URL")
 
+    @app.route("/")
+    def home():
+        return "ok"
+
+    def ping():
+        while True:
+            if url:
+                try:
+                    requests.get(url)
+                except:
+                    pass
+            time.sleep(240)
+
+    Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
+    Thread(target=ping).start()
+
+async def start():
+    print("X-OPTIMUS STARTING")
     total = load_plugins()
+    print("API:", API_ID)
+    print("Plugins:", total)
 
-    print("🆔 API ID:", API_ID)
-    print("📦 Plugins Loaded:", total)
-    print("💻 Platform:", platform.system())
-    print("══════════════════════════════")
+    platform_type = detect_platform()
+    print("Platform:", platform_type)
+
+    if platform_type in ["RENDER", "KOYEB"]:
+        print("KeepAlive: ON (Port Enabled)")
+        start_keepalive()
+    else:
+        print("KeepAlive: OFF (Panel/Local Detected)")
 
     await bot.start()
-    bot.START_TIME = time.time()
-
     me = await bot.get_me()
+
+    global OWNER
     if not OWNER:
         OWNER = str(me.id)
 
@@ -239,19 +150,14 @@ async def start_bot():
 
     await auto_join()
 
-    for m in plugins.values():
-        if hasattr(m, "on_startup"):
+    for p in plugins.values():
+        if hasattr(p, "on_startup"):
             try:
-                await m.on_startup(bot)
+                await p.on_startup(bot)
             except:
                 pass
 
-    print("🟢 BOT ONLINE")
-    print("══════════════════════════════")
+    print("BOT ONLINE")
 
-
-# =====================================================================
-#  RUN BOT
-# =====================================================================
-bot.loop.run_until_complete(start_bot())
+bot.loop.run_until_complete(start())
 bot.run_until_disconnected()
